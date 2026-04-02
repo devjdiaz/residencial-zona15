@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="es-GT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Habitaciones en alquiler en Zona 15, Colonia El Maestro, Ciudad de Guatemala. Ambiente tranquilo para personas trabajadoras." />
+  <title>Residencial El Maestro — Habitaciones en Zona 15</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #faf6f1;
+      --bg-card: #ffffff;
+      --ink: #2c2622;
+      --muted: #5c534c;
+      --accent: #c45c3e;
+      --accent-hover: #a84d32;
+      --accent-soft: rgba(196, 92, 62, 0.12);
+      --sage: #6b7f6a;
+      --sage-soft: #e8ede7;
+      --border: #e5ddd4;
+      --shadow: 0 12px 40px rgba(44, 38, 34, 0.08);
+      --radius: 14px;
+      --radius-lg: 22px;
+      --max: 1080px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      z-index: 999;
+      padding: 0.75rem 1rem;
+      background: var(--ink);
+      color: #fff;
+      border-radius: 6px;
+    }
+
+    .skip-link:focus {
+      left: 1rem;
+      top: 1rem;
+    }
+
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(250, 246, 241, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .logo {
+      font-family: "Fraunces", Georgia, serif;
+      font-weight: 600;
+      font-size: 1.15rem;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .logo:hover {
+      text-decoration: none;
+      color: var(--accent);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(196, 92, 62, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: var(--sage-soft);
+      text-decoration: none;
+    }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(3rem, 8vw, 5.5rem) 1.25rem 4rem;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 70% 0%, rgba(196, 92, 62, 0.14), transparent 50%),
+        radial-gradient(ellipse 60% 50% at 10% 80%, rgba(107, 127, 106, 0.12), transparent 45%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      position: relative;
+      max-width: var(--max);
+      margin: 0 auto;
+      display: grid;
+      gap: 2.5rem;
+      align-items: center;
+    }
+
+    @media (min-width: 860px) {
+      .hero-inner {
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 3rem;
+      }
+    }
+
+    .hero-badge {
+      display: inline-block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--sage);
+      background: var(--sage-soft);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: clamp(2rem, 4.5vw, 2.85rem);
+      font-weight: 600;
+      line-height: 1.15;
+      margin: 0 0 1rem;
+      color: var(--ink);
+    }
+
+    .hero-lead {
+      font-size: 1.1rem;
+      color: var(--muted);
+      margin: 0 0 1.75rem;
+      max-width: 36ch;
+    }
+
+    .hero-cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-note {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .hero-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    .hero-card h2 {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.25rem;
+      margin: 0 0 1rem;
+    }
+
+    .hero-stats {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .stat {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat:last-child {
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 0.95rem;
+      color: var(--ink);
+    }
+
+    .stat span {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    /* Sections */
+    section {
+      padding: 3.5rem 1.25rem;
+    }
+
+    section:nth-child(even) {
+      background: #f3ece4;
+    }
+
+    .section-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+    }
+
+    .section-head {
+      margin-bottom: 2rem;
+    }
+
+    .section-head h2 {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: clamp(1.65rem, 3vw, 2rem);
+      margin: 0 0 0.5rem;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 52ch;
+    }
+
+    /* Cards grid */
+    .cards {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 700px) {
+      .cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 24px rgba(44, 38, 34, 0.06);
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.25s, transform 0.2s;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-2px);
+    }
+
+    .card-tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .card h3 {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.4rem;
+      margin: 0 0 0.75rem;
+    }
+
+    .price {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.25rem;
+    }
+
+    .price span {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .card ul {
+      margin: 1rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .card li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .card li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--sage);
+      font-weight: 700;
+    }
+
+    .service-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.75rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .service-grid li {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--ink);
+      position: relative;
+      padding-left: 2.25rem;
+    }
+
+    .service-grid li::before {
+      content: "✓";
+      position: absolute;
+      left: 1rem;
+      color: var(--sage);
+      font-weight: 700;
+    }
+
+    /* Conditions */
+    .cond-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    @media (min-width: 640px) {
+      .cond-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .cond-item {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.35rem;
+      border: 1px solid var(--border);
+    }
+
+    .cond-item strong {
+      display: block;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--sage);
+      margin-bottom: 0.35rem;
+    }
+
+    .cond-item p {
+      margin: 0;
+      font-size: 0.98rem;
+    }
+
+    .alert-box {
+      margin-top: 1.75rem;
+      padding: 1.25rem 1.5rem;
+      background: #fff8f5;
+      border: 1px solid #f0d9cf;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .alert-box strong {
+      color: var(--ink);
+    }
+
+    /* Location */
+    .location-block {
+      display: grid;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (min-width: 768px) {
+      .location-block {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .map-placeholder {
+      aspect-ratio: 16/10;
+      background: linear-gradient(145deg, var(--sage-soft), #ddd5cb);
+      border-radius: var(--radius-lg);
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
+      padding: 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .map-placeholder a {
+      font-weight: 600;
+    }
+
+    /* Contact & payment */
+    .two-col {
+      display: grid;
+      gap: 2rem;
+    }
+
+    @media (min-width: 768px) {
+      .two-col {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .info-box {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      border: 1px solid var(--border);
+    }
+
+    .info-box h3 {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.2rem;
+      margin: 0 0 1rem;
+    }
+
+    .info-box dl {
+      margin: 0;
+    }
+
+    .info-box dt {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin-top: 1rem;
+    }
+
+    .info-box dt:first-child {
+      margin-top: 0;
+    }
+
+    .info-box dd {
+      margin: 0.25rem 0 0;
+      font-size: 1.05rem;
+      font-weight: 500;
+    }
+
+    .placeholder {
+      background: #f0ebe5;
+      padding: 0.35rem 0.6rem;
+      border-radius: 6px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.9rem;
+      word-break: break-all;
+    }
+
+    /* Footer */
+    footer {
+      padding: 2rem 1.25rem;
+      text-align: center;
+      font-size: 0.88rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      background: #efe8df;
+    }
+
+    footer p {
+      margin: 0.35rem 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+      .btn-primary:hover,
+      .card:hover {
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#contenido-principal">Saltar al contenido</a>
+
+  <header>
+    <div class="header-inner">
+      <a class="logo" href="#">Residencial El Maestro</a>
+      <a class="btn btn-primary" id="nav-whatsapp" href="#" aria-label="Escribir por WhatsApp">WhatsApp</a>
+    </div>
+  </header>
+
+  <main id="contenido-principal">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-inner">
+        <div>
+          <span class="hero-badge">Zona 15 · Ciudad de Guatemala</span>
+          <h1 id="hero-title">Tu espacio tranquilo para trabajar y descansar</h1>
+          <p class="hero-lead">
+            Habitaciones en alquiler en Colonia El Maestro, pensadas para personas trabajadoras y empleados que buscan un ambiente ordenado, seguro y cercano a todo.
+          </p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" id="hero-whatsapp" href="#">Agendar visita por WhatsApp</a>
+            <a class="btn btn-ghost" href="#habitaciones">Ver habitaciones</a>
+          </div>
+          <p class="hero-note">
+            <strong>Totalmente independiente.</strong> Coordina con el guardián Julio: visitas de lunes a viernes de 8:00 a.m. a 7:00 p.m.; los sábados solo al mediodía.
+          </p>
+        </div>
+        <aside class="hero-card" aria-label="Resumen rápido">
+          <h2>Por qué elegirnos</h2>
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-icon" aria-hidden="true">🏠</div>
+              <div>
+                <strong>Ubicación privilegiada</strong>
+                <span>Zona 15, una de las zonas más cómodas de la ciudad.</span>
+              </div>
+            </div>
+            <div class="stat">
+              <div class="stat-icon" aria-hidden="true">🤝</div>
+              <div>
+                <strong>Enfoque profesional</strong>
+                <span>Vecindario tranquilo, ideal para quienes trabajan fuera de casa.</span>
+              </div>
+            </div>
+            <div class="stat">
+              <div class="stat-icon" aria-hidden="true">📋</div>
+              <div>
+                <strong>Todo incluido</strong>
+                <span>Agua caliente, luz, internet, seguridad y más en todas las habitaciones.</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="servicios" aria-labelledby="servicios-title">
+      <div class="section-inner">
+        <div class="section-head">
+          <h2 id="servicios-title">Servicios incluidos en todas las habitaciones</h2>
+          <p>
+            Todas las habitaciones incluyen los mismos servicios: mismo estándar de comodidad y funcionamiento, con espacios totalmente independientes.
+          </p>
+        </div>
+        <ul class="service-grid" role="list">
+          <li>Agua caliente</li>
+          <li>Luz</li>
+          <li>Internet</li>
+          <li>Seguridad</li>
+          <li>Baño privado</li>
+          <li>Clóset</li>
+          <li>Lavadora compartida</li>
+          <li>Cocineta</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="habitaciones" aria-labelledby="habitaciones-title">
+      <div class="section-inner">
+        <div class="section-head">
+          <h2 id="habitaciones-title">Tipos de habitaciones</h2>
+          <p>
+            Elige el tipo de espacio que prefieras. En ambos casos cuentas con todos los servicios del residencial (ver arriba). Precios referenciales; disponibilidad sujeta a consulta.
+          </p>
+        </div>
+        <div class="cards">
+          <article class="card">
+            <span class="card-tag">Opción esencial</span>
+            <h3>Habitaciones sencillas</h3>
+            <p class="price">Q1,600 <span>/ mes en adelante</span></p>
+            <ul>
+              <li>Todos los servicios del residencial incluidos</li>
+              <li>Cama y clóset</li>
+              <li>Distribución en un solo nivel</li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="card-tag">Más espacio</span>
+            <h3>Lofts de 2 niveles</h3>
+            <p class="price">Q3,000 <span>/ mes en adelante</span></p>
+            <ul>
+              <li>Todos los servicios del residencial incluidos</li>
+              <li>Mini sala o comedor y cocineta</li>
+              <li>Baño y descanso; cama y clóset en el segundo nivel</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="horarios-visita" aria-labelledby="horarios-title">
+      <div class="section-inner">
+        <div class="section-head">
+          <h2 id="horarios-title">Horario para ver habitaciones</h2>
+          <p>Se muestran habitaciones en los siguientes horarios. Confirma con el guardián antes de ir.</p>
+        </div>
+        <div class="cond-grid">
+          <div class="cond-item">
+            <strong>Lunes a viernes</strong>
+            <p>De <strong>8:00 a.m. a 7:00 p.m.</strong></p>
+          </div>
+          <div class="cond-item">
+            <strong>Sábados</strong>
+            <p><strong>Solo al mediodía</strong> — coordina la hora exacta con Julio.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="condiciones" aria-labelledby="condiciones-title">
+      <div class="section-inner">
+        <div class="section-head">
+          <h2 id="condiciones-title">Condiciones del contrato</h2>
+          <p>Contrato mínimo seis meses, ambiente estable y reglas claras para todos.</p>
+        </div>
+        <div class="cond-grid">
+          <div class="cond-item">
+            <strong>Duración y contrato</strong>
+            <p>Contrato mínimo <strong>6 meses</strong>. Costo del contrato: <strong>Q100</strong>. Se firma presentando tu <strong>DPI</strong>.</p>
+          </div>
+          <div class="cond-item">
+            <strong>Perfil de residentes</strong>
+            <p>Dirigido a <strong>personas estables</strong> (trabajadoras y empleados). Espacios <strong>totalmente independientes</strong>.</p>
+          </div>
+          <div class="cond-item">
+            <strong>Depósito de garantía</strong>
+            <p><strong>Q1,000</strong>, según lo acordado en el contrato.</p>
+          </div>
+          <div class="cond-item">
+            <strong>Ocupación</strong>
+            <p>Incluida <strong>1 persona</strong>. Familiar adicional: <strong>Q500</strong> mensuales.</p>
+          </div>
+        </div>
+        <div class="alert-box" role="note">
+          <strong>Importante:</strong> No se aceptan <strong>mascotas</strong>. No se alquilan habitaciones a <strong>parejas</strong> (convivencia de pareja). El residencial prioriza un entorno tranquilo y ordenado.
+        </div>
+      </div>
+    </section>
+
+    <section id="ubicacion" aria-labelledby="ubicacion-title">
+      <div class="section-inner">
+        <div class="section-head">
+          <h2 id="ubicacion-title">Ubicación</h2>
+          <p>Estamos en una zona residencial consolidada, con buen acceso y servicios cercanos.</p>
+        </div>
+        <div class="location-block">
+          <div>
+            <p style="margin: 0 0 1rem; font-size: 1.05rem;">
+              <strong>Residencial El Maestro</strong><br />
+              Zona 15, Colonia El Maestro<br />
+              Ciudad de Guatemala
+            </p>
+            <p style="margin: 0; color: var(--muted); font-size: 0.95rem;">
+              Llama o escribe a <strong>Julio</strong> (guardián) para coordinar: te indica la referencia exacta y el punto de encuentro.
+            </p>
+          </div>
+          <div class="map-placeholder">
+            <span>
+              <a href="https://www.google.com/maps/search/Zona+15+Colonia+El+Maestro+Guatemala+City" target="_blank" rel="noopener noreferrer">Ver zona en Google Maps</a><br />
+              <small style="display: block; margin-top: 0.5rem;">Colonia El Maestro, Zona 15</small>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contacto" aria-labelledby="contacto-title">
+      <div class="section-inner">
+        <div class="section-head">
+          <h2 id="contacto-title">Contacto y pagos</h2>
+          <p>
+            <strong>Márcale al guardián Julio</strong> y coordina visita u horarios. Depósito de garantía: <strong>Q1,000</strong>. Los datos bancarios para depósitos se confirman al formalizar.
+          </p>
+        </div>
+        <p class="owner-signoff" style="margin: -0.5rem 0 1.75rem; font-size: 1.05rem; color: var(--ink);">
+          Quedo atenta a cualquier duda.
+        </p>
+        <div class="two-col">
+          <div class="info-box">
+            <h3>Julio — guardián (visitas y consultas)</h3>
+            <dl>
+              <dt>Teléfono / WhatsApp</dt>
+              <dd><span class="placeholder" id="numero-guardian"></span></dd>
+              <dt>Cómo agendar</dt>
+              <dd>Llama o escribe por WhatsApp para conocer habitaciones, horarios de visita y requisitos.</dd>
+            </dl>
+            <p style="margin: 1.25rem 0 0; font-size: 0.9rem; color: var(--muted);">
+              Si prefieres llamar directo: <a id="tel-guardian" href="#">marcar a Julio</a>
+            </p>
+          </div>
+          <div class="info-box">
+            <h3>Depósitos bancarios</h3>
+            <dl>
+              <dt>Cuenta para depósitos</dt>
+              <dd><span class="placeholder" id="cuenta-banco"></span></dd>
+              <dt>Recuerda</dt>
+              <dd>Conserva el comprobante y coordina la aplicación del pago según lo acordado en tu contrato.</dd>
+            </dl>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 2rem;">
+          <a class="btn btn-primary" id="footer-whatsapp" href="#">Escribir por WhatsApp</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p><strong>Residencial El Maestro</strong> — Habitaciones en alquiler · Zona 15, Colonia El Maestro, Guatemala.</p>
+    <p>Información orientativa. Precios y disponibilidad sujetos a confirmación al momento de la visita.</p>
+  </footer>
+
+  <script>
+    (function () {
+      /**
+       * CONFIG — Edita aquí: un solo lugar para datos sensibles y CTAs de WhatsApp.
+       * whatsappDigits: solo dígitos, sin + ni espacios (Guatemala: 502 + 8 dígitos móvil).
+       * guardianDisplay: texto que ves en la página (puede incluir espacios o +502).
+       * bankAccount: datos de cuenta para depósitos (banco, tipo, número, a nombre de).
+       */
+      var CONFIG = {
+        whatsappDigits: "50241211335",
+        guardianDisplay: "+502 4121 1335 — Julio",
+        guardianTelHref: "tel:+50241211335",
+        bankAccount: "[CUENTA BANCO]",
+        whatsappMessage:
+          "Hola Julio, vi la página del Residencial El Maestro en Zona 15. Me gustaría coordinar una visita para conocer las habitaciones disponibles.",
+      };
+
+      function buildWhatsAppUrl() {
+        var encoded = encodeURIComponent(CONFIG.whatsappMessage);
+        return "https://wa.me/" + CONFIG.whatsappDigits + "?text=" + encoded;
+      }
+
+      function init() {
+        var guardianEl = document.getElementById("numero-guardian");
+        var bankEl = document.getElementById("cuenta-banco");
+        if (guardianEl) guardianEl.textContent = CONFIG.guardianDisplay;
+        if (bankEl) bankEl.textContent = CONFIG.bankAccount;
+
+        var telGuardian = document.getElementById("tel-guardian");
+        if (telGuardian && CONFIG.guardianTelHref) {
+          telGuardian.href = CONFIG.guardianTelHref;
+        }
+
+        var url = buildWhatsAppUrl();
+        ["nav-whatsapp", "hero-whatsapp", "footer-whatsapp"].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) {
+            el.href = url;
+            el.setAttribute("target", "_blank");
+            el.setAttribute("rel", "noopener noreferrer");
+          }
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
