@@ -320,6 +320,12 @@
       }
     }
 
+    @media (min-width: 1100px) {
+      .cards-four {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
     .card {
       background: var(--bg-card);
       border-radius: var(--radius-lg);
@@ -463,33 +469,73 @@
     }
 
     /* Location */
-    .location-block {
+    .map-embed-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      min-height: 220px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 24px rgba(44, 38, 34, 0.06);
+      background: var(--sage-soft);
+    }
+
+    .map-embed-wrap iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    .location-address {
+      margin: 0 0 1rem;
+      font-size: 1.05rem;
+      font-style: normal;
+      line-height: 1.55;
+    }
+
+    .coords-line {
+      margin: 0 0 1rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+      font-family: ui-monospace, monospace;
+    }
+
+    .map-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    .btn-waze {
+      background: #33ccff;
+      color: #0a2a33;
+      box-shadow: 0 4px 14px rgba(51, 204, 255, 0.35);
+    }
+
+    .btn-waze:hover {
+      background: #22b8ec;
+      color: #0a2a33;
+      text-decoration: none;
+    }
+
+    .btn-waze:focus-visible {
+      outline: 2px solid #0a2a33;
+      outline-offset: 3px;
+    }
+
+    .location-block-wide {
       display: grid;
       gap: 1.5rem;
-      align-items: start;
     }
 
     @media (min-width: 768px) {
-      .location-block {
+      .location-block-wide {
         grid-template-columns: 1fr 1fr;
+        align-items: start;
       }
-    }
-
-    .map-placeholder {
-      aspect-ratio: 16/10;
-      background: linear-gradient(145deg, var(--sage-soft), #ddd5cb);
-      border-radius: var(--radius-lg);
-      display: grid;
-      place-items: center;
-      color: var(--muted);
-      font-size: 0.95rem;
-      text-align: center;
-      padding: 1rem;
-      border: 1px solid var(--border);
-    }
-
-    .map-placeholder a {
-      font-weight: 600;
     }
 
     /* Contact & payment */
@@ -655,28 +701,45 @@
         <div class="section-head">
           <h2 id="habitaciones-title">Tipos de habitaciones</h2>
           <p>
-            Elige el tipo de espacio que prefieras. En ambos casos cuentas con todos los servicios del residencial (ver arriba). Precios referenciales; disponibilidad sujeta a consulta.
+            Elige el tipo de espacio que prefieras. En todos los casos cuentas con todos los servicios del residencial (ver arriba). <strong>No incluyen cama</strong> — el mobiliario de dormitorio es a cargo del residente. Precios referenciales; disponibilidad sujeta a consulta.
           </p>
         </div>
-        <div class="cards">
+        <div class="cards cards-four">
           <article class="card">
-            <span class="card-tag">Opción esencial</span>
-            <h3>Habitaciones sencillas</h3>
+            <span class="card-tag">Más compacta</span>
+            <h3>Habitación pequeña</h3>
             <p class="price">Q1,600 <span>/ mes en adelante</span></p>
             <ul>
               <li>Todos los servicios del residencial incluidos</li>
-              <li>Cama y clóset</li>
-              <li>Distribución en un solo nivel</li>
+              <li>Formato reducido, un solo nivel</li>
             </ul>
           </article>
           <article class="card">
-            <span class="card-tag">Más espacio</span>
+            <span class="card-tag">Equilibrada</span>
+            <h3>Habitación estándar</h3>
+            <p class="price">Q2,000 <span>/ mes en adelante</span></p>
+            <ul>
+              <li>Todos los servicios del residencial incluidos</li>
+              <li>Tamaño intermedio, un solo nivel</li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="card-tag">Amplia</span>
+            <h3>Habitación grande</h3>
+            <p class="price">Q2,500 <span>/ mes en adelante</span></p>
+            <ul>
+              <li>Todos los servicios del residencial incluidos</li>
+              <li>Mayor espacio, un solo nivel</li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="card-tag">Dos niveles</span>
             <h3>Lofts de 2 niveles</h3>
             <p class="price">Q3,000 <span>/ mes en adelante</span></p>
             <ul>
               <li>Todos los servicios del residencial incluidos</li>
               <li>Mini sala o comedor y cocineta</li>
-              <li>Baño y descanso; cama y clóset en el segundo nivel</li>
+              <li>Segundo nivel: área de descanso y clóset</li>
             </ul>
           </article>
         </div>
@@ -738,22 +801,43 @@
           <h2 id="ubicacion-title">Ubicación</h2>
           <p>Estamos en una zona residencial consolidada, con buen acceso y servicios cercanos.</p>
         </div>
-        <div class="location-block">
+        <div class="location-block-wide">
           <div>
-            <p style="margin: 0 0 1rem; font-size: 1.05rem;">
+            <address class="location-address">
               <strong>Residencial El Maestro</strong><br />
+              17 Avenida D 0-22<br />
               Zona 15, Colonia El Maestro<br />
               Ciudad de Guatemala
+            </address>
+            <p class="coords-line">
+              Coordenadas: 14.594524, -90.497563
             </p>
             <p style="margin: 0; color: var(--muted); font-size: 0.95rem;">
-              Llama o escribe a <strong>Julio</strong> (guardián) para coordinar: te indica la referencia exacta y el punto de encuentro.
+              Si necesitas ayuda al llegar, llama o escribe a <strong>Julio</strong> (guardián).
             </p>
+            <div class="map-actions">
+              <a
+                class="btn btn-primary"
+                href="https://www.google.com/maps/dir/?api=1&destination=14.594524,-90.497563"
+                target="_blank"
+                rel="noopener noreferrer"
+              >Abrir ruta en Google Maps</a>
+              <a
+                class="btn btn-waze"
+                href="https://www.waze.com/ul?ll=14.594524,-90.497563&navigate=yes"
+                target="_blank"
+                rel="noopener noreferrer"
+              >Abrir ruta en Waze</a>
+            </div>
           </div>
-          <div class="map-placeholder">
-            <span>
-              <a href="https://www.google.com/maps/search/Zona+15+Colonia+El+Maestro+Guatemala+City" target="_blank" rel="noopener noreferrer">Ver zona en Google Maps</a><br />
-              <small style="display: block; margin-top: 0.5rem;">Colonia El Maestro, Zona 15</small>
-            </span>
+          <div class="map-embed-wrap">
+            <iframe
+              title="Mapa — Residencial El Maestro, 17 Avenida D 0-22 Zona 15"
+              src="https://maps.google.com/maps?q=14.594524,-90.497563&z=17&hl=es&output=embed"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              allowfullscreen
+            ></iframe>
           </div>
         </div>
       </div>
@@ -801,7 +885,7 @@
   </main>
 
   <footer>
-    <p><strong>Residencial El Maestro</strong> — Habitaciones en alquiler · Zona 15, Colonia El Maestro, Guatemala.</p>
+    <p><strong>Residencial El Maestro</strong> — 17 Avenida D 0-22, Zona 15, Colonia El Maestro, Ciudad de Guatemala.</p>
     <p>Información orientativa. Precios y disponibilidad sujetos a confirmación al momento de la visita.</p>
   </footer>
 
