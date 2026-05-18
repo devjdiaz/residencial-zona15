@@ -1,944 +1,2151 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es-GT">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Habitaciones en alquiler en Zona 15, Colonia El Maestro, Ciudad de Guatemala. Ambiente tranquilo para personas trabajadoras." />
-  <title>Residencial El Maestro — Habitaciones en Zona 15</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #faf6f1;
-      --bg-card: #ffffff;
-      --ink: #2c2622;
-      --muted: #5c534c;
-      --accent: #c45c3e;
-      --accent-hover: #a84d32;
-      --accent-soft: rgba(196, 92, 62, 0.12);
-      --sage: #6b7f6a;
-      --sage-soft: #e8ede7;
-      --border: #e5ddd4;
-      --shadow: 0 12px 40px rgba(44, 38, 34, 0.08);
-      --radius: 14px;
-      --radius-lg: 22px;
-      --max: 1080px;
-    }
-
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      margin: 0;
-      font-family: "DM Sans", system-ui, sans-serif;
-      font-size: 1rem;
-      line-height: 1.6;
-      color: var(--ink);
-      background: var(--bg);
-      -webkit-font-smoothing: antialiased;
-    }
-
-    img {
-      max-width: 100%;
-      height: auto;
-    }
-
-    a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    .skip-link {
-      position: absolute;
-      left: -9999px;
-      z-index: 999;
-      padding: 0.75rem 1rem;
-      background: var(--ink);
-      color: #fff;
-      border-radius: 6px;
-    }
-
-    .skip-link:focus {
-      left: 1rem;
-      top: 1rem;
-    }
-
-    /* Header */
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: rgba(250, 246, 241, 0.92);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .header-inner {
-      max-width: var(--max);
-      margin: 0 auto;
-      padding: 0.85rem 1.25rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-
-    .logo {
-      font-family: "Fraunces", Georgia, serif;
-      font-weight: 600;
-      font-size: 1.15rem;
-      color: var(--ink);
-      text-decoration: none;
-    }
-
-    .logo:hover {
-      text-decoration: none;
-      color: var(--accent);
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.65rem 1.25rem;
-      font-family: inherit;
-      font-size: 0.95rem;
-      font-weight: 600;
-      border: none;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-    }
-
-    .btn:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 3px;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      box-shadow: 0 4px 14px rgba(196, 92, 62, 0.35);
-    }
-
-    .btn-primary:hover {
-      background: var(--accent-hover);
-      text-decoration: none;
-      transform: translateY(-1px);
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--ink);
-      border: 1px solid var(--border);
-    }
-
-    .btn-ghost:hover {
-      background: var(--sage-soft);
-      text-decoration: none;
-    }
-
-    /* Hero */
-    .hero {
-      position: relative;
-      overflow: hidden;
-      padding: clamp(3rem, 8vw, 5.5rem) 1.25rem 4rem;
-    }
-
-    .hero::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 70% 0%, rgba(196, 92, 62, 0.14), transparent 50%),
-        radial-gradient(ellipse 60% 50% at 10% 80%, rgba(107, 127, 106, 0.12), transparent 45%);
-      pointer-events: none;
-    }
-
-    .hero-inner {
-      position: relative;
-      max-width: var(--max);
-      margin: 0 auto;
-      display: grid;
-      gap: 2.5rem;
-      align-items: center;
-    }
-
-    @media (min-width: 860px) {
-      .hero-inner {
-        grid-template-columns: 1.1fr 0.9fr;
-        gap: 3rem;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Habitaciones independientes en alquiler en Zona 15, Colonia El Maestro, Ciudad de Guatemala. Espacios tranquilos para personas trabajadoras."
+    />
+    <title>Residencial El Maestro | Habitaciones en Zona 15</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f8f3ed;
+        --surface: #ffffff;
+        --surface-soft: #f1eae1;
+        --ink: #23241f;
+        --muted: #5d625a;
+        --accent: #b64532;
+        --accent-hover: #953323;
+        --accent-soft: #fae7e1;
+        --sage: #456b57;
+        --sage-soft: #e6eee6;
+        --blue: #24577a;
+        --blue-soft: #e6eef4;
+        --alert: #ba1f1f;
+        --alert-soft: #fff0f0;
+        --border: rgba(35, 36, 31, 0.14);
+        --shadow: 0 18px 46px rgba(35, 36, 31, 0.12);
+        --shadow-soft: 0 10px 30px rgba(35, 36, 31, 0.08);
+        --radius: 8px;
+        --max: 1120px;
       }
-    }
 
-    .hero-badge {
-      display: inline-block;
-      font-size: 0.8rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--sage);
-      background: var(--sage-soft);
-      padding: 0.35rem 0.75rem;
-      border-radius: 999px;
-      margin-bottom: 1rem;
-    }
-
-    .hero h1 {
-      font-family: "Fraunces", Georgia, serif;
-      font-size: clamp(2rem, 4.5vw, 2.85rem);
-      font-weight: 600;
-      line-height: 1.15;
-      margin: 0 0 1rem;
-      color: var(--ink);
-    }
-
-    .hero-lead {
-      font-size: 1.1rem;
-      color: var(--muted);
-      margin: 0 0 1.75rem;
-      max-width: 36ch;
-    }
-
-    .hero-cta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .hero-note {
-      font-size: 0.9rem;
-      color: var(--muted);
-      margin: 0;
-    }
-
-    .hero-card {
-      background: var(--bg-card);
-      border-radius: var(--radius-lg);
-      padding: 1.75rem;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-    }
-
-    .hero-card h2 {
-      font-family: "Fraunces", Georgia, serif;
-      font-size: 1.25rem;
-      margin: 0 0 1rem;
-    }
-
-    .hero-stats {
-      display: grid;
-      gap: 1rem;
-    }
-
-    .stat {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .stat:last-child {
-      padding-bottom: 0;
-      border-bottom: none;
-    }
-
-    .stat-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: var(--accent-soft);
-      display: grid;
-      place-items: center;
-      font-size: 1.1rem;
-      flex-shrink: 0;
-    }
-
-    .stat strong {
-      display: block;
-      font-size: 0.95rem;
-      color: var(--ink);
-    }
-
-    .stat span {
-      font-size: 0.88rem;
-      color: var(--muted);
-    }
-
-    /* Sections */
-    section {
-      padding: 3.5rem 1.25rem;
-    }
-
-    section:nth-child(even) {
-      background: #f3ece4;
-    }
-
-    .section-inner {
-      max-width: var(--max);
-      margin: 0 auto;
-    }
-
-    .section-head {
-      margin-bottom: 2rem;
-    }
-
-    .section-head h2 {
-      font-family: "Fraunces", Georgia, serif;
-      font-size: clamp(1.65rem, 3vw, 2rem);
-      margin: 0 0 0.5rem;
-    }
-
-    .section-head p {
-      margin: 0;
-      color: var(--muted);
-      max-width: 52ch;
-    }
-
-    /* Cards grid */
-    .cards {
-      display: grid;
-      gap: 1.5rem;
-    }
-
-    @media (min-width: 700px) {
-      .cards {
-        grid-template-columns: repeat(2, 1fr);
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
       }
-    }
 
-    @media (min-width: 1100px) {
-      .cards-four {
-        grid-template-columns: repeat(4, 1fr);
-      }
-    }
-
-    .card {
-      background: var(--bg-card);
-      border-radius: var(--radius-lg);
-      padding: 1.75rem;
-      border: 1px solid var(--border);
-      box-shadow: 0 4px 24px rgba(44, 38, 34, 0.06);
-      display: flex;
-      flex-direction: column;
-      transition: box-shadow 0.25s, transform 0.2s;
-    }
-
-    .card:hover {
-      box-shadow: var(--shadow);
-      transform: translateY(-2px);
-    }
-
-    .card-tag {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--accent);
-      margin-bottom: 0.5rem;
-    }
-
-    .card h3 {
-      font-family: "Fraunces", Georgia, serif;
-      font-size: 1.4rem;
-      margin: 0 0 0.75rem;
-    }
-
-    .price {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: var(--ink);
-      margin-bottom: 0.25rem;
-    }
-
-    .price span {
-      font-size: 1rem;
-      font-weight: 500;
-      color: var(--muted);
-    }
-
-    .card ul {
-      margin: 1rem 0 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .card li {
-      position: relative;
-      padding-left: 1.5rem;
-      margin-bottom: 0.5rem;
-      font-size: 0.95rem;
-      color: var(--muted);
-    }
-
-    .card li::before {
-      content: "✓";
-      position: absolute;
-      left: 0;
-      color: var(--sage);
-      font-weight: 700;
-    }
-
-    .service-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 0.75rem;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .service-grid li {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.85rem 1rem;
-      font-size: 0.95rem;
-      font-weight: 500;
-      color: var(--ink);
-      position: relative;
-      padding-left: 2.25rem;
-    }
-
-    .service-grid li::before {
-      content: "✓";
-      position: absolute;
-      left: 1rem;
-      color: var(--sage);
-      font-weight: 700;
-    }
-
-    /* Conditions */
-    .cond-grid {
-      display: grid;
-      gap: 1rem;
-    }
-
-    @media (min-width: 640px) {
-      .cond-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    .cond-item {
-      background: var(--bg-card);
-      border-radius: var(--radius);
-      padding: 1.25rem 1.35rem;
-      border: 1px solid var(--border);
-    }
-
-    .cond-item strong {
-      display: block;
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--sage);
-      margin-bottom: 0.35rem;
-    }
-
-    .cond-item p {
-      margin: 0;
-      font-size: 0.98rem;
-    }
-
-    .alert-box {
-      margin-top: 1.75rem;
-      padding: 1.25rem 1.5rem;
-      background: #fff8f5;
-      border: 1px solid #f0d9cf;
-      border-radius: var(--radius);
-      font-size: 0.95rem;
-      color: var(--muted);
-    }
-
-    .alert-box strong {
-      color: var(--ink);
-    }
-
-    /* Location */
-    .map-embed-wrap {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 16 / 10;
-      min-height: 220px;
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      border: 1px solid var(--border);
-      box-shadow: 0 4px 24px rgba(44, 38, 34, 0.06);
-      background: var(--sage-soft);
-    }
-
-    .map-embed-wrap iframe {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border: 0;
-    }
-
-    .location-address {
-      margin: 0 0 1rem;
-      font-size: 1.05rem;
-      font-style: normal;
-      line-height: 1.55;
-    }
-
-    .coords-line {
-      margin: 0 0 1rem;
-      font-size: 0.88rem;
-      color: var(--muted);
-      font-family: ui-monospace, monospace;
-    }
-
-    .map-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-top: 1.25rem;
-    }
-
-    .btn-waze {
-      background: #33ccff;
-      color: #0a2a33;
-      box-shadow: 0 4px 14px rgba(51, 204, 255, 0.35);
-    }
-
-    .btn-waze:hover {
-      background: #22b8ec;
-      color: #0a2a33;
-      text-decoration: none;
-    }
-
-    .btn-waze:focus-visible {
-      outline: 2px solid #0a2a33;
-      outline-offset: 3px;
-    }
-
-    .location-block-wide {
-      display: grid;
-      gap: 1.5rem;
-    }
-
-    @media (min-width: 768px) {
-      .location-block-wide {
-        grid-template-columns: 1fr 1fr;
-        align-items: start;
-      }
-    }
-
-    /* Contact & payment */
-    .two-col {
-      display: grid;
-      gap: 2rem;
-    }
-
-    @media (min-width: 768px) {
-      .two-col {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    .info-box {
-      background: var(--bg-card);
-      border-radius: var(--radius-lg);
-      padding: 1.75rem;
-      border: 1px solid var(--border);
-    }
-
-    .info-box h3 {
-      font-family: "Fraunces", Georgia, serif;
-      font-size: 1.2rem;
-      margin: 0 0 1rem;
-    }
-
-    .info-box dl {
-      margin: 0;
-    }
-
-    .info-box dt {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--muted);
-      margin-top: 1rem;
-    }
-
-    .info-box dt:first-child {
-      margin-top: 0;
-    }
-
-    .info-box dd {
-      margin: 0.25rem 0 0;
-      font-size: 1.05rem;
-      font-weight: 500;
-    }
-
-    .placeholder {
-      background: #f0ebe5;
-      padding: 0.35rem 0.6rem;
-      border-radius: 6px;
-      font-family: ui-monospace, monospace;
-      font-size: 0.9rem;
-      word-break: break-all;
-    }
-
-    /* Footer */
-    footer {
-      padding: 2rem 1.25rem;
-      text-align: center;
-      font-size: 0.88rem;
-      color: var(--muted);
-      border-top: 1px solid var(--border);
-      background: #efe8df;
-    }
-
-    footer p {
-      margin: 0.35rem 0;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
       html {
-        scroll-behavior: auto;
+        scroll-behavior: smooth;
       }
-      .btn-primary:hover,
-      .card:hover {
+
+      body {
+        margin: 0;
+        font-family: 'DM Sans', system-ui, sans-serif;
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--ink);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+
+      figure {
+        margin: 0;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .skip-link {
+        position: absolute;
+        left: -9999px;
+        z-index: 999;
+        padding: 0.75rem 1rem;
+        background: var(--ink);
+        color: #fff;
+        border-radius: var(--radius);
+      }
+
+      .skip-link:focus {
+        left: 1rem;
+        top: 1rem;
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(248, 243, 237, 0.92);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .header-inner {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: 0.85rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .logo {
+        display: inline-flex;
+        flex-direction: column;
+        color: var(--ink);
+        line-height: 1.1;
+        text-decoration: none;
+      }
+
+      .logo strong {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 1.12rem;
+        font-weight: 650;
+      }
+
+      .logo span {
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+
+      .nav-actions {
+        display: none;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.92rem;
+        font-weight: 650;
+      }
+
+      .nav-actions a:not(.btn) {
+        color: var(--muted);
+      }
+
+      @media (min-width: 740px) {
+        .nav-actions {
+          display: flex;
+        }
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: 42px;
+        padding: 0.72rem 1.1rem;
+        font-family: inherit;
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1.1;
+        border: 1px solid transparent;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition:
+          background 0.2s ease,
+          border-color 0.2s ease,
+          box-shadow 0.2s ease,
+          transform 0.2s ease;
+        white-space: nowrap;
+      }
+
+      .btn:focus-visible,
+      .carousel-control:focus-visible,
+      .carousel-dot:focus-visible {
+        outline: 3px solid rgba(182, 69, 50, 0.35);
+        outline-offset: 3px;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(182, 69, 50, 0.24);
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        color: #fff;
+        text-decoration: none;
+        transform: translateY(-1px);
+      }
+
+      .btn-ghost {
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--ink);
+        border-color: var(--border);
+      }
+
+      .btn-ghost:hover {
+        background: #fff;
+        text-decoration: none;
+        transform: translateY(-1px);
+      }
+
+      .btn-waze {
+        background: #33ccff;
+        color: #062833;
+        box-shadow: 0 8px 20px rgba(51, 204, 255, 0.24);
+      }
+
+      .btn-waze:hover {
+        background: #21b7e8;
+        color: #062833;
+        text-decoration: none;
+        transform: translateY(-1px);
+      }
+
+      .hero {
+        padding: clamp(2.75rem, 6vw, 5.5rem) 1.25rem 3rem;
+        background:
+          linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.76),
+            rgba(241, 234, 225, 0.94)
+          ),
+          var(--bg);
+      }
+
+      .hero-inner {
+        max-width: var(--max);
+        margin: 0 auto;
+        display: grid;
+        gap: 2rem;
+        align-items: center;
+      }
+
+      @media (min-width: 900px) {
+        .hero-inner {
+          grid-template-columns: minmax(0, 0.94fr) minmax(440px, 1.06fr);
+          gap: 3.5rem;
+        }
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        padding: 0.4rem 0.65rem;
+        background: var(--sage-soft);
+        color: var(--sage);
+        border-radius: var(--radius);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        content: '';
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      .hero h1 {
+        margin: 0 0 1rem;
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: clamp(2.3rem, 5vw, 4.15rem);
+        font-weight: 650;
+        line-height: 1.02;
+        letter-spacing: 0;
+        color: var(--ink);
+      }
+
+      .hero-lead {
+        max-width: 58ch;
+        margin: 0 0 1.5rem;
+        color: var(--muted);
+        font-size: clamp(1.02rem, 1.5vw, 1.16rem);
+      }
+
+      .hero-cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.1rem;
+      }
+
+      .hero-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .trust-strip {
+        display: grid;
+        gap: 0.65rem;
+        margin-top: 1.5rem;
+        padding: 0;
+        list-style: none;
+      }
+
+      @media (min-width: 560px) {
+        .trust-strip {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      .trust-strip li {
+        padding: 0.85rem 0.9rem;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 650;
+      }
+
+      .trust-strip strong {
+        display: block;
+        color: var(--ink);
+        font-size: 0.96rem;
+      }
+
+      .hero-media {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      .media-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        color: var(--muted);
+        font-size: 0.88rem;
+        font-weight: 650;
+      }
+
+      .media-label span {
+        color: var(--alert);
+      }
+
+      .hero-photo-grid {
+        display: grid;
+        grid-template-columns: 1fr 0.7fr;
+        grid-template-rows: repeat(2, minmax(130px, 1fr));
+        gap: 0.75rem;
+        min-height: 430px;
+      }
+
+      .image-frame,
+      .carousel-slide {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--radius);
+        background:
+          linear-gradient(
+            135deg,
+            rgba(69, 107, 87, 0.16),
+            rgba(36, 87, 122, 0.12)
+          ),
+          #e9e2d8;
+        border: 1px solid var(--border);
+      }
+
+      .image-frame:first-child {
+        grid-row: 1 / span 2;
+      }
+
+      .image-frame img,
+      .carousel-slide img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition:
+          transform 0.65s ease,
+          opacity 0.45s ease;
+      }
+
+      .image-frame.is-missing img,
+      .carousel-slide.is-missing img {
+        display: none;
+      }
+
+      .image-fallback {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        text-align: center;
+        color: rgba(35, 36, 31, 0.68);
+        font-size: 0.92rem;
+        font-weight: 750;
+      }
+
+      .image-frame.has-image .image-fallback,
+      .carousel-slide.has-image .image-fallback {
+        display: none;
+      }
+
+      .image-frame::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          transparent 55%,
+          rgba(0, 0, 0, 0.36)
+        );
+        pointer-events: none;
+      }
+
+      .image-caption {
+        position: absolute;
+        left: 0.85rem;
+        right: 0.85rem;
+        bottom: 0.85rem;
+        z-index: 1;
+        color: #fff;
+        font-size: 0.84rem;
+        font-weight: 700;
+        text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+      }
+
+      section {
+        padding: clamp(3rem, 6vw, 5rem) 1.25rem;
+      }
+
+      section:nth-of-type(even) {
+        background: var(--surface-soft);
+      }
+
+      .section-inner {
+        max-width: var(--max);
+        margin: 0 auto;
+      }
+
+      .section-head {
+        display: grid;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+      }
+
+      @media (min-width: 760px) {
+        .section-head {
+          grid-template-columns: minmax(0, 0.9fr) minmax(280px, 0.55fr);
+          align-items: end;
+        }
+      }
+
+      .section-head h2 {
+        margin: 0;
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: clamp(1.85rem, 3vw, 2.55rem);
+        font-weight: 650;
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      .section-head p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .photo-alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.8rem;
+        margin: 0 0 1.5rem;
+        padding: 1rem 1.1rem;
+        background: var(--alert-soft);
+        border: 1px solid rgba(186, 31, 31, 0.24);
+        border-left: 4px solid var(--alert);
+        border-radius: var(--radius);
+        color: #572020;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+
+      .photo-alert strong {
+        color: var(--alert);
+      }
+
+      .alert-mark {
+        display: inline-grid;
+        place-items: center;
+        width: 1.45rem;
+        height: 1.45rem;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: var(--alert);
+        color: #fff;
+        font-size: 0.95rem;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .room-list {
+        display: grid;
+        gap: 1.25rem;
+      }
+
+      .room-showcase {
+        display: grid;
+        gap: 0;
+        overflow: hidden;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-soft);
+        opacity: 1;
         transform: none;
-      }
-    }
-  </style>
-</head>
-<body>
-  <a class="skip-link" href="#contenido-principal">Saltar al contenido</a>
-
-  <header>
-    <div class="header-inner">
-      <a class="logo" href="#">Residencial El Maestro</a>
-      <a class="btn btn-primary" id="nav-whatsapp" href="#" aria-label="Escribir por WhatsApp">WhatsApp</a>
-    </div>
-  </header>
-
-  <main id="contenido-principal">
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-inner">
-        <div>
-          <span class="hero-badge">Zona 15 · Ciudad de Guatemala</span>
-          <h1 id="hero-title">Tu espacio tranquilo para trabajar y descansar</h1>
-          <p class="hero-lead">
-            Habitaciones en alquiler en Colonia El Maestro, pensadas para personas trabajadoras y empleados que buscan un ambiente ordenado, seguro y cercano a todo.
-          </p>
-          <div class="hero-cta">
-            <a class="btn btn-primary" id="hero-whatsapp" href="#">Agendar visita por WhatsApp</a>
-            <a class="btn btn-ghost" href="#habitaciones">Ver habitaciones</a>
-          </div>
-          <p class="hero-note">
-            <strong>Totalmente independiente.</strong> Coordina con el guardián Julio: visitas de lunes a viernes de 8:00 a.m. a 7:00 p.m.; los sábados solo al mediodía.
-          </p>
-        </div>
-        <aside class="hero-card" aria-label="Resumen rápido">
-          <h2>Por qué elegirnos</h2>
-          <div class="hero-stats">
-            <div class="stat">
-              <div class="stat-icon" aria-hidden="true">🏠</div>
-              <div>
-                <strong>Ubicación privilegiada</strong>
-                <span>Zona 15, una de las zonas más cómodas de la ciudad.</span>
-              </div>
-            </div>
-            <div class="stat">
-              <div class="stat-icon" aria-hidden="true">🤝</div>
-              <div>
-                <strong>Enfoque profesional</strong>
-                <span>Vecindario tranquilo, ideal para quienes trabajan fuera de casa.</span>
-              </div>
-            </div>
-            <div class="stat">
-              <div class="stat-icon" aria-hidden="true">📋</div>
-              <div>
-                <strong>Todo incluido</strong>
-                <span>Agua caliente, luz, internet, seguridad y más en todas las habitaciones.</span>
-              </div>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </section>
-
-    <section id="servicios" aria-labelledby="servicios-title">
-      <div class="section-inner">
-        <div class="section-head">
-          <h2 id="servicios-title">Servicios incluidos en todas las habitaciones</h2>
-          <p>
-            Todas las habitaciones incluyen los mismos servicios: mismo estándar de comodidad y funcionamiento, con espacios totalmente independientes.
-          </p>
-        </div>
-        <ul class="service-grid" role="list">
-          <li>Agua caliente</li>
-          <li>Luz</li>
-          <li>Internet</li>
-          <li>Seguridad</li>
-          <li>Baño privado</li>
-          <li>Clóset</li>
-          <li>Lavadora compartida</li>
-          <li>Cocineta</li>
-        </ul>
-      </div>
-    </section>
-
-    <section id="habitaciones" aria-labelledby="habitaciones-title">
-      <div class="section-inner">
-        <div class="section-head">
-          <h2 id="habitaciones-title">Tipos de habitaciones</h2>
-          <p>
-            Elige el tipo de espacio que prefieras. En todos los casos cuentas con todos los servicios del residencial (ver arriba). <strong>No incluyen cama</strong> — el mobiliario de dormitorio es a cargo del residente. Precios referenciales; disponibilidad sujeta a consulta.
-          </p>
-        </div>
-        <div class="cards cards-four">
-          <article class="card">
-            <span class="card-tag">Más compacta</span>
-            <h3>Habitación pequeña</h3>
-            <p class="price">Q1,600 <span>/ mes en adelante</span></p>
-            <ul>
-              <li>Todos los servicios del residencial incluidos</li>
-              <li>Formato reducido, un solo nivel</li>
-            </ul>
-          </article>
-          <article class="card">
-            <span class="card-tag">Equilibrada</span>
-            <h3>Habitación estándar</h3>
-            <p class="price">Q2,000 <span>/ mes en adelante</span></p>
-            <ul>
-              <li>Todos los servicios del residencial incluidos</li>
-              <li>Tamaño intermedio, un solo nivel</li>
-            </ul>
-          </article>
-          <article class="card">
-            <span class="card-tag">Amplia</span>
-            <h3>Habitación grande</h3>
-            <p class="price">Q2,500 <span>/ mes en adelante</span></p>
-            <ul>
-              <li>Todos los servicios del residencial incluidos</li>
-              <li>Mayor espacio, un solo nivel</li>
-            </ul>
-          </article>
-          <article class="card">
-            <span class="card-tag">Dos niveles</span>
-            <h3>Lofts de 2 niveles</h3>
-            <p class="price">Q3,000 <span>/ mes en adelante</span></p>
-            <ul>
-              <li>Todos los servicios del residencial incluidos</li>
-              <li>Mini sala o comedor y cocineta</li>
-              <li>Segundo nivel: área de descanso y clóset</li>
-            </ul>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="horarios-visita" aria-labelledby="horarios-title">
-      <div class="section-inner">
-        <div class="section-head">
-          <h2 id="horarios-title">Horario para ver habitaciones</h2>
-          <p>Se muestran habitaciones en los siguientes horarios. Confirma con el guardián antes de ir.</p>
-        </div>
-        <div class="cond-grid">
-          <div class="cond-item">
-            <strong>Lunes a viernes</strong>
-            <p>De <strong>8:00 a.m. a 7:00 p.m.</strong></p>
-          </div>
-          <div class="cond-item">
-            <strong>Sábados</strong>
-            <p><strong>Solo al mediodía</strong> — coordina la hora exacta con Julio.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="condiciones" aria-labelledby="condiciones-title">
-      <div class="section-inner">
-        <div class="section-head">
-          <h2 id="condiciones-title">Condiciones del contrato</h2>
-          <p>Contrato mínimo seis meses, ambiente estable y reglas claras para todos.</p>
-        </div>
-        <div class="cond-grid">
-          <div class="cond-item">
-            <strong>Duración y contrato</strong>
-            <p>Contrato mínimo <strong>6 meses</strong>. Costo del contrato: <strong>Q100</strong>. Se firma presentando tu <strong>DPI</strong>.</p>
-          </div>
-          <div class="cond-item">
-            <strong>Perfil de residentes</strong>
-            <p>Dirigido a <strong>personas estables</strong> (trabajadoras y empleados). Espacios <strong>totalmente independientes</strong>.</p>
-          </div>
-          <div class="cond-item">
-            <strong>Depósito de garantía</strong>
-            <p><strong>Q1,000</strong>, según lo acordado en el contrato.</p>
-          </div>
-          <div class="cond-item">
-            <strong>Ocupación</strong>
-            <p>Incluida <strong>1 persona</strong>. Familiar adicional: <strong>Q500</strong> mensuales.</p>
-          </div>
-        </div>
-        <div class="alert-box" role="note">
-          <strong>Importante:</strong> No se aceptan <strong>mascotas</strong>. No se alquilan habitaciones a <strong>parejas</strong> (convivencia de pareja). El residencial prioriza un entorno tranquilo y ordenado.
-        </div>
-      </div>
-    </section>
-
-    <section id="ubicacion" aria-labelledby="ubicacion-title">
-      <div class="section-inner">
-        <div class="section-head">
-          <h2 id="ubicacion-title">Ubicación</h2>
-          <p>Estamos en una zona residencial consolidada, con buen acceso y servicios cercanos.</p>
-        </div>
-        <div class="location-block-wide">
-          <div>
-            <address class="location-address">
-              <strong>Residencial El Maestro</strong><br />
-              17 Avenida D 0-22<br />
-              Zona 15, Colonia El Maestro<br />
-              Ciudad de Guatemala
-            </address>
-            <p class="coords-line">
-              Coordenadas: 14.594524, -90.497563
-            </p>
-            <p style="margin: 0; color: var(--muted); font-size: 0.95rem;">
-              Si necesitas ayuda al llegar, llama o escribe a <strong>Julio</strong> (guardián).
-            </p>
-            <div class="map-actions">
-              <a
-                class="btn btn-primary"
-                href="https://www.google.com/maps/dir/?api=1&destination=14.594524,-90.497563"
-                target="_blank"
-                rel="noopener noreferrer"
-              >Abrir ruta en Google Maps</a>
-              <a
-                class="btn btn-waze"
-                href="https://www.waze.com/ul?ll=14.594524,-90.497563&navigate=yes"
-                target="_blank"
-                rel="noopener noreferrer"
-              >Abrir ruta en Waze</a>
-            </div>
-          </div>
-          <div class="map-embed-wrap">
-            <iframe
-              title="Mapa — Residencial El Maestro, 17 Avenida D 0-22 Zona 15"
-              src="https://maps.google.com/maps?q=14.594524,-90.497563&z=17&hl=es&output=embed"
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-              allowfullscreen
-            ></iframe>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="contacto" aria-labelledby="contacto-title">
-      <div class="section-inner">
-        <div class="section-head">
-          <h2 id="contacto-title">Contacto y pagos</h2>
-          <p>
-            <strong>Márcale al guardián Julio</strong> y coordina visita u horarios. Depósito de garantía: <strong>Q1,000</strong>. Los datos bancarios para depósitos se confirman al formalizar.
-          </p>
-        </div>
-        <p class="owner-signoff" style="margin: -0.5rem 0 1.75rem; font-size: 1.05rem; color: var(--ink);">
-          Quedo atenta a cualquier duda.
-        </p>
-        <div class="two-col">
-          <div class="info-box">
-            <h3>Julio — guardián (visitas y consultas)</h3>
-            <dl>
-              <dt>Teléfono / WhatsApp</dt>
-              <dd><span class="placeholder" id="numero-guardian"></span></dd>
-              <dt>Cómo agendar</dt>
-              <dd>Llama o escribe por WhatsApp para conocer habitaciones, horarios de visita y requisitos.</dd>
-            </dl>
-            <p style="margin: 1.25rem 0 0; font-size: 0.9rem; color: var(--muted);">
-              Si prefieres llamar directo: <a id="tel-guardian" href="#">marcar a Julio</a>
-            </p>
-          </div>
-          <div class="info-box">
-            <h3>Depósitos bancarios</h3>
-            <dl>
-              <dt>Cuenta para depósitos</dt>
-              <dd><span class="placeholder" id="cuenta-banco"></span></dd>
-              <dt>Recuerda</dt>
-              <dd>Conserva el comprobante y coordina la aplicación del pago según lo acordado en tu contrato.</dd>
-            </dl>
-          </div>
-        </div>
-        <div style="text-align: center; margin-top: 2rem;">
-          <a class="btn btn-primary" id="footer-whatsapp" href="#">Escribir por WhatsApp</a>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <p><strong>Residencial El Maestro</strong> — 17 Avenida D 0-22, Zona 15, Colonia El Maestro, Ciudad de Guatemala.</p>
-    <p>Información orientativa. Precios y disponibilidad sujetos a confirmación al momento de la visita.</p>
-  </footer>
-
-  <script>
-    (function () {
-      /**
-       * CONFIG — Edita aquí: un solo lugar para datos sensibles y CTAs de WhatsApp.
-       * whatsappDigits: solo dígitos, sin + ni espacios (Guatemala: 502 + 8 dígitos móvil).
-       * guardianDisplay: texto que ves en la página (puede incluir espacios o +502).
-       * bankAccount: datos de cuenta para depósitos (banco, tipo, número, a nombre de).
-       */
-      var CONFIG = {
-        whatsappDigits: "50241211335",
-        guardianDisplay: "+502 4121 1335 — Julio",
-        guardianTelHref: "tel:+50241211335",
-        bankAccount: "[CUENTA BANCO]",
-        whatsappMessage:
-          "Hola Julio, vi la página del Residencial El Maestro en Zona 15. Me gustaría coordinar una visita para conocer las habitaciones disponibles.",
-      };
-
-      function buildWhatsAppUrl() {
-        var encoded = encodeURIComponent(CONFIG.whatsappMessage);
-        return "https://wa.me/" + CONFIG.whatsappDigits + "?text=" + encoded;
+        transition: box-shadow 0.25s ease;
       }
 
-      function init() {
-        var guardianEl = document.getElementById("numero-guardian");
-        var bankEl = document.getElementById("cuenta-banco");
-        if (guardianEl) guardianEl.textContent = CONFIG.guardianDisplay;
-        if (bankEl) bankEl.textContent = CONFIG.bankAccount;
+      .room-showcase.will-reveal {
+        opacity: 0;
+        transform: translateY(18px);
+        transition:
+          opacity 0.55s ease,
+          transform 0.55s ease,
+          box-shadow 0.25s ease;
+      }
 
-        var telGuardian = document.getElementById("tel-guardian");
-        if (telGuardian && CONFIG.guardianTelHref) {
-          telGuardian.href = CONFIG.guardianTelHref;
+      .room-showcase.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .room-showcase:hover {
+        box-shadow: var(--shadow);
+      }
+
+      @media (min-width: 900px) {
+        .room-showcase {
+          grid-template-columns: minmax(0, 1.12fr) minmax(340px, 0.88fr);
         }
 
-        var url = buildWhatsAppUrl();
-        ["nav-whatsapp", "hero-whatsapp", "footer-whatsapp"].forEach(function (id) {
-          var el = document.getElementById(id);
-          if (el) {
-            el.href = url;
-            el.setAttribute("target", "_blank");
-            el.setAttribute("rel", "noopener noreferrer");
-          }
-        });
+        .room-showcase.room-showcase-reverse {
+          grid-template-columns: minmax(340px, 0.88fr) minmax(0, 1.12fr);
+        }
+
+        .room-showcase.room-showcase-reverse .room-media {
+          order: 2;
+        }
       }
 
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
-      } else {
-        init();
+      .room-media {
+        min-width: 0;
+        background: #e9e2d8;
       }
-    })();
-  </script>
-</body>
+
+      .room-copy {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: clamp(1.35rem, 3vw, 2.1rem);
+      }
+
+      .room-kicker {
+        margin: 0 0 0.35rem;
+        color: var(--sage);
+        font-size: 0.78rem;
+        font-weight: 850;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .room-copy h3 {
+        margin: 0 0 0.6rem;
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: clamp(1.55rem, 2.4vw, 2.1rem);
+        font-weight: 650;
+        line-height: 1.1;
+      }
+
+      .room-description {
+        margin: 0 0 1rem;
+        color: var(--muted);
+      }
+
+      .price-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.35rem 0.55rem;
+        margin-bottom: 1rem;
+      }
+
+      .price {
+        color: var(--ink);
+        font-size: clamp(1.85rem, 3vw, 2.3rem);
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .price-note {
+        color: var(--muted);
+        font-weight: 650;
+      }
+
+      .feature-list {
+        display: grid;
+        gap: 0.55rem;
+        margin: 0 0 1.35rem;
+        padding: 0;
+        list-style: none;
+      }
+
+      .feature-list li {
+        position: relative;
+        padding-left: 1.35rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .feature-list li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0.65em;
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 2px;
+        background: var(--sage);
+        transform: translateY(-50%) rotate(45deg);
+      }
+
+      .room-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+      }
+
+      .reference-pill {
+        color: var(--alert);
+        font-size: 0.84rem;
+        font-weight: 800;
+      }
+
+      .room-carousel {
+        position: relative;
+        height: 100%;
+        min-height: 330px;
+        outline: none;
+      }
+
+      @media (min-width: 900px) {
+        .room-carousel {
+          min-height: 480px;
+        }
+      }
+
+      .carousel-viewport {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        min-height: inherit;
+        overflow: hidden;
+      }
+
+      .carousel-track {
+        display: flex;
+        gap: 0;
+        width: 100%;
+        height: 100%;
+        min-height: inherit;
+        transform: translateX(0);
+        transition: transform 0.58s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .carousel-slide {
+        width: 100%;
+        min-width: 100%;
+        flex: 0 0 100%;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        opacity: 0.78;
+        transition: opacity 0.45s ease;
+      }
+
+      .carousel-slide.is-active {
+        opacity: 1;
+      }
+
+      .carousel-slide.is-active img {
+        transform: scale(1.035);
+      }
+
+      .carousel-slide::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(0, 0, 0, 0.04),
+          rgba(0, 0, 0, 0.38)
+        );
+        pointer-events: none;
+      }
+
+      .carousel-caption {
+        position: absolute;
+        left: 1rem;
+        right: 1rem;
+        bottom: 2.7rem;
+        z-index: 2;
+        color: #fff;
+        font-size: 0.88rem;
+        font-weight: 750;
+        text-shadow: 0 1px 10px rgba(0, 0, 0, 0.4);
+      }
+
+      .carousel-control {
+        position: absolute;
+        top: 50%;
+        z-index: 4;
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: 999px;
+        background: rgba(35, 36, 31, 0.55);
+        color: #fff;
+        font-size: 1.8rem;
+        line-height: 1;
+        cursor: pointer;
+        transform: translateY(-50%);
+        transition:
+          background 0.2s ease,
+          transform 0.2s ease;
+      }
+
+      .carousel-control:hover {
+        background: rgba(35, 36, 31, 0.75);
+        transform: translateY(-50%) scale(1.04);
+      }
+
+      .carousel-control.prev {
+        left: 0.85rem;
+      }
+
+      .carousel-control.next {
+        right: 0.85rem;
+      }
+
+      .carousel-dots {
+        position: absolute;
+        left: 50%;
+        bottom: 1rem;
+        z-index: 5;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.35rem;
+        width: min(72%, 340px);
+        max-height: 2.05rem;
+        overflow: hidden;
+        transform: translateX(-50%);
+      }
+
+      .carousel-dot {
+        width: 0.46rem;
+        height: 0.46rem;
+        flex: 0 0 auto;
+        padding: 0;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.58);
+        cursor: pointer;
+        transition:
+          width 0.25s ease,
+          background 0.25s ease;
+      }
+
+      .carousel-dot.is-active {
+        width: 1.15rem;
+        background: #fff;
+      }
+
+      .service-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 0.75rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .service-grid li {
+        position: relative;
+        min-height: 58px;
+        padding: 1rem 1rem 1rem 2.55rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--ink);
+        font-weight: 700;
+        box-shadow: 0 6px 18px rgba(35, 36, 31, 0.04);
+      }
+
+      .service-grid li::before {
+        content: '';
+        position: absolute;
+        left: 1rem;
+        top: 1.35rem;
+        width: 0.65rem;
+        height: 0.65rem;
+        border-radius: 2px;
+        background: var(--sage);
+        transform: rotate(45deg);
+      }
+
+      .cond-grid {
+        display: grid;
+        gap: 1rem;
+      }
+
+      @media (min-width: 700px) {
+        .cond-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      .cond-item,
+      .info-box {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        box-shadow: 0 6px 18px rgba(35, 36, 31, 0.04);
+      }
+
+      .cond-item strong {
+        display: block;
+        margin-bottom: 0.35rem;
+        color: var(--sage);
+        font-size: 0.8rem;
+        font-weight: 850;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .cond-item p {
+        margin: 0;
+      }
+
+      .alert-box {
+        margin-top: 1.25rem;
+        padding: 1.1rem 1.25rem;
+        background: var(--alert-soft);
+        border: 1px solid rgba(186, 31, 31, 0.22);
+        border-left: 4px solid var(--alert);
+        border-radius: var(--radius);
+        color: #572020;
+        font-weight: 600;
+      }
+
+      .alert-box strong {
+        color: var(--alert);
+      }
+
+      .location-block-wide,
+      .two-col {
+        display: grid;
+        gap: 1.25rem;
+      }
+
+      @media (min-width: 780px) {
+        .location-block-wide,
+        .two-col {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .location-address {
+        margin: 0 0 1rem;
+        font-size: 1.05rem;
+        font-style: normal;
+        line-height: 1.55;
+      }
+
+      .coords-line {
+        margin: 0 0 1rem;
+        color: var(--muted);
+        font-family: ui-monospace, monospace;
+        font-size: 0.88rem;
+      }
+
+      .map-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.2rem;
+      }
+
+      .map-embed-wrap {
+        position: relative;
+        width: 100%;
+        min-height: 260px;
+        aspect-ratio: 16 / 10;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--blue-soft);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .map-embed-wrap iframe {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+
+      .info-box h3 {
+        margin: 0 0 1rem;
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 1.28rem;
+        font-weight: 650;
+      }
+
+      .info-box dl {
+        margin: 0;
+      }
+
+      .info-box dt {
+        margin-top: 1rem;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 850;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .info-box dt:first-child {
+        margin-top: 0;
+      }
+
+      .info-box dd {
+        margin: 0.25rem 0 0;
+        font-size: 1.04rem;
+        font-weight: 650;
+      }
+
+      .placeholder {
+        display: inline-block;
+        max-width: 100%;
+        padding: 0.35rem 0.55rem;
+        background: #f0ebe5;
+        border-radius: 6px;
+        font-family: ui-monospace, monospace;
+        font-size: 0.9rem;
+        word-break: break-word;
+      }
+
+      .owner-signoff {
+        margin: -0.5rem 0 1.75rem;
+        color: var(--ink);
+        font-size: 1.05rem;
+      }
+
+      footer {
+        padding: 2rem 1.25rem 5rem;
+        text-align: center;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+        background: #e8dfd4;
+        font-size: 0.88rem;
+      }
+
+      footer p {
+        margin: 0.35rem 0;
+      }
+
+      .floating-whatsapp {
+        position: fixed;
+        left: 1rem;
+        right: 1rem;
+        bottom: 1rem;
+        z-index: 80;
+        box-shadow: 0 14px 32px rgba(182, 69, 50, 0.34);
+      }
+
+      @media (min-width: 740px) {
+        .floating-whatsapp {
+          display: none;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .header-inner {
+          padding-inline: 1rem;
+        }
+
+        .hero {
+          padding-inline: 1rem;
+        }
+
+        .hero-photo-grid {
+          grid-template-columns: 1fr;
+          grid-template-rows: repeat(3, 190px);
+          min-height: auto;
+        }
+
+        .image-frame:first-child {
+          grid-row: auto;
+        }
+
+        section {
+          padding-inline: 1rem;
+        }
+
+        .room-copy {
+          padding: 1.15rem;
+        }
+
+        .room-carousel {
+          min-height: 300px;
+        }
+
+        .carousel-control {
+          width: 38px;
+          height: 38px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
+
+        .room-showcase {
+          opacity: 1;
+          transform: none;
+        }
+
+        .carousel-slide.is-active img {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido-principal">Saltar al contenido</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="logo" href="#">
+          <strong>Residencial El Maestro</strong>
+          <span>Habitaciones en Zona 15</span>
+        </a>
+        <nav class="nav-actions" aria-label="Navegación principal">
+          <a href="#habitaciones">Habitaciones</a>
+          <a href="#servicios">Servicios</a>
+          <a href="#ubicacion">Ubicación</a>
+          <a class="btn btn-primary" id="nav-whatsapp" href="#">WhatsApp</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="contenido-principal">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-inner">
+          <div>
+            <span class="eyebrow">Zona 15 · Colonia El Maestro</span>
+            <h1 id="hero-title">
+              Habitaciones independientes para vivir tranquilo en la ciudad
+            </h1>
+            <p class="hero-lead">
+              Espacios en alquiler para personas trabajadoras que buscan una
+              ubicación cómoda, ambiente ordenado y servicios incluidos en
+              Ciudad de Guatemala.
+            </p>
+            <div class="hero-cta">
+              <a class="btn btn-primary" id="hero-whatsapp" href="#"
+                >Agendar visita por WhatsApp</a
+              >
+              <a class="btn btn-ghost" href="#habitaciones">Ver habitaciones</a>
+            </div>
+            <p class="hero-note">
+              Coordina con Julio: visitas de lunes a viernes de 8:00 a.m. a 7:00
+              p.m.; sábados solo al mediodía.
+            </p>
+            <ul class="trust-strip" role="list">
+              <li><strong>Desde Q1,600</strong>Precios según tipo</li>
+              <li>
+                <strong>Servicios incluidos</strong>Luz, agua, internet y más
+              </li>
+              <li><strong>Contrato claro</strong>Mínimo 6 meses</li>
+            </ul>
+          </div>
+
+          <div class="hero-media" aria-label="Vista general de habitaciones">
+            <div class="media-label">
+              <strong>Galería del residencial</strong>
+              <span>Fotos reales referenciales</span>
+            </div>
+            <div class="hero-photo-grid">
+              <figure class="image-frame" data-image-fallback>
+                <img
+                  src="assets/rooms/loft/d333a653-d21e-46cf-84cc-ea4afd33f497.JPG"
+                  alt="Loft de dos niveles en Residencial El Maestro"
+                  loading="eager"
+                />
+                <span class="image-fallback"
+                  >Foto referencial pendiente · loft</span
+                >
+                <figcaption class="image-caption">
+                  Lofts y habitaciones independientes
+                </figcaption>
+              </figure>
+              <figure class="image-frame" data-image-fallback>
+                <img
+                  src="assets/rooms/estandar/03e9ac0f-78dc-4f7a-a8a6-d50afd938ba1.JPG"
+                  alt="Habitación estándar en Residencial El Maestro"
+                  loading="lazy"
+                />
+                <span class="image-fallback"
+                  >Foto referencial pendiente · estándar</span
+                >
+                <figcaption class="image-caption">
+                  Opciones desde Q1,600
+                </figcaption>
+              </figure>
+              <figure class="image-frame" data-image-fallback>
+                <img
+                  src="assets/rooms/grande/461166fd-d566-436c-8a37-a846496ecd58.JPG"
+                  alt="Habitación grande en Residencial El Maestro"
+                  loading="lazy"
+                />
+                <span class="image-fallback"
+                  >Foto referencial pendiente · grande</span
+                >
+                <figcaption class="image-caption">
+                  Ambiente residencial en Zona 15
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="habitaciones" aria-labelledby="habitaciones-title">
+        <div class="section-inner">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Tipos de habitación</span>
+              <h2 id="habitaciones-title">
+                Elige el espacio que se ajusta a tu rutina
+              </h2>
+            </div>
+            <p>
+              Todas las opciones son independientes e incluyen los servicios del
+              residencial. Los precios son referenciales y la disponibilidad se
+              confirma por WhatsApp.
+            </p>
+          </div>
+
+          <div class="photo-alert" role="note">
+            <span class="alert-mark" aria-hidden="true">!</span>
+            <span
+              ><strong>Importante:</strong> las fotos son reales, pero
+              referenciales. La distribución, acabados o tamaño pueden variar
+              según la habitación disponible.</span
+            >
+          </div>
+
+          <div class="room-list">
+            <article class="room-showcase">
+              <div class="room-media">
+                <div
+                  class="room-carousel"
+                  data-carousel
+                  data-room-key="pequena"
+                  aria-label="Galería de habitación pequeña"
+                  tabindex="0"
+                >
+                  <div class="carousel-viewport">
+                    <div class="carousel-track">
+                      <figure
+                        class="carousel-slide is-active"
+                        data-image-fallback
+                      >
+                        <img
+                          src="assets/rooms/pequena/2b844709-43dc-4147-8c91-f43468cf76c2.JPG"
+                          alt="Habitación pequeña de referencia en Residencial El Maestro"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · pequeña 1</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Imagen real referencial · habitación pequeña
+                        </figcaption>
+                      </figure>
+                      <figure class="carousel-slide" data-image-fallback>
+                        <img
+                          src="assets/rooms/pequena/46d58e55-4e5a-44f2-b73d-a95d7c1eaea3.JPG"
+                          alt="Vista interior de habitación pequeña de referencia"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · pequeña 2</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Distribución puede variar según disponibilidad
+                        </figcaption>
+                      </figure>
+                      <figure class="carousel-slide" data-image-fallback>
+                        <img
+                          src="assets/rooms/pequena/4bd11449-19ce-4967-b3d7-aa77992a866a.JPG"
+                          alt="Detalle de habitación pequeña de referencia"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · pequeña 3</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Fotos reales del residencial, usadas como referencia
+                        </figcaption>
+                      </figure>
+                    </div>
+                  </div>
+                  <button
+                    class="carousel-control prev"
+                    type="button"
+                    data-carousel-prev
+                    aria-label="Imagen anterior"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    class="carousel-control next"
+                    type="button"
+                    data-carousel-next
+                    aria-label="Imagen siguiente"
+                  >
+                    ›
+                  </button>
+                  <div
+                    class="carousel-dots"
+                    aria-label="Seleccionar imagen"
+                  ></div>
+                </div>
+              </div>
+              <div class="room-copy">
+                <p class="room-kicker">Más compacta</p>
+                <h3>Habitación pequeña</h3>
+                <p class="room-description">
+                  Una opción práctica para quien busca independencia, ubicación
+                  y un espacio funcional de un solo nivel.
+                </p>
+                <div class="price-row">
+                  <span class="price">Q1,600</span>
+                  <span class="price-note">/ mes en adelante</span>
+                </div>
+                <ul class="feature-list">
+                  <li>Servicios del residencial incluidos</li>
+                  <li>Formato reducido y fácil de mantener</li>
+                  <li>Baño privado, clóset y cocineta</li>
+                </ul>
+                <div class="room-actions">
+                  <a
+                    class="btn btn-primary js-room-whatsapp"
+                    href="#"
+                    data-room="habitación pequeña"
+                    >Consultar esta habitación</a
+                  >
+                  <span class="reference-pill">Fotos reales referenciales</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="room-showcase room-showcase-reverse">
+              <div class="room-media">
+                <div
+                  class="room-carousel"
+                  data-carousel
+                  data-room-key="estandar"
+                  aria-label="Galería de habitación estándar"
+                  tabindex="0"
+                >
+                  <div class="carousel-viewport">
+                    <div class="carousel-track">
+                      <figure
+                        class="carousel-slide is-active"
+                        data-image-fallback
+                      >
+                        <img
+                          src="assets/rooms/estandar/03e9ac0f-78dc-4f7a-a8a6-d50afd938ba1.JPG"
+                          alt="Habitación estándar de referencia en Residencial El Maestro"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · estándar 1</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Imagen real referencial · habitación estándar
+                        </figcaption>
+                      </figure>
+                      <figure class="carousel-slide" data-image-fallback>
+                        <img
+                          src="assets/rooms/estandar/3b20c1a6-bb8a-4800-b9d0-5643447869a7.JPG"
+                          alt="Vista interior de habitación estándar de referencia"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · estándar 2</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Distribución puede variar según disponibilidad
+                        </figcaption>
+                      </figure>
+                      <figure class="carousel-slide" data-image-fallback>
+                        <img
+                          src="assets/rooms/estandar/523faeac-95e9-42f2-a841-cddb63f2d51d.JPG"
+                          alt="Detalle de habitación estándar de referencia"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · estándar 3</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Fotos reales del residencial, usadas como referencia
+                        </figcaption>
+                      </figure>
+                    </div>
+                  </div>
+                  <button
+                    class="carousel-control prev"
+                    type="button"
+                    data-carousel-prev
+                    aria-label="Imagen anterior"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    class="carousel-control next"
+                    type="button"
+                    data-carousel-next
+                    aria-label="Imagen siguiente"
+                  >
+                    ›
+                  </button>
+                  <div
+                    class="carousel-dots"
+                    aria-label="Seleccionar imagen"
+                  ></div>
+                </div>
+              </div>
+              <div class="room-copy">
+                <p class="room-kicker">Equilibrada</p>
+                <h3>Habitación estándar</h3>
+                <p class="room-description">
+                  Balance entre precio y comodidad para quienes necesitan un
+                  espacio estable cerca de las principales zonas de la ciudad.
+                </p>
+                <div class="price-row">
+                  <span class="price">Q2,000</span>
+                  <span class="price-note">/ mes en adelante</span>
+                </div>
+                <ul class="feature-list">
+                  <li>Tamaño intermedio, un solo nivel</li>
+                  <li>Servicios incluidos desde el ingreso</li>
+                  <li>Independencia con ambiente residencial</li>
+                </ul>
+                <div class="room-actions">
+                  <a
+                    class="btn btn-primary js-room-whatsapp"
+                    href="#"
+                    data-room="habitación estándar"
+                    >Consultar esta habitación</a
+                  >
+                  <span class="reference-pill">Fotos reales referenciales</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="room-showcase">
+              <div class="room-media">
+                <div
+                  class="room-carousel"
+                  data-carousel
+                  data-room-key="grande"
+                  aria-label="Galería de habitación grande"
+                  tabindex="0"
+                >
+                  <div class="carousel-viewport">
+                    <div class="carousel-track">
+                      <figure
+                        class="carousel-slide is-active"
+                        data-image-fallback
+                      >
+                        <img
+                          src="assets/rooms/grande/461166fd-d566-436c-8a37-a846496ecd58.JPG"
+                          alt="Habitación grande de referencia en Residencial El Maestro"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · grande 1</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Imagen real referencial · habitación grande
+                        </figcaption>
+                      </figure>
+                      <figure class="carousel-slide" data-image-fallback>
+                        <img
+                          src="assets/rooms/grande/2a2d8edb-e9a7-4b21-9bcb-0f5e3b10cbb3.JPG"
+                          alt="Vista interior de habitación grande de referencia"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · grande 2</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Distribución puede variar según disponibilidad
+                        </figcaption>
+                      </figure>
+                      <figure class="carousel-slide" data-image-fallback>
+                        <img
+                          src="assets/rooms/grande/1d13579d-32ff-44c0-a514-a9429891aaa5.JPG"
+                          alt="Detalle de habitación grande de referencia"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · grande 3</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Fotos reales del residencial, usadas como referencia
+                        </figcaption>
+                      </figure>
+                    </div>
+                  </div>
+                  <button
+                    class="carousel-control prev"
+                    type="button"
+                    data-carousel-prev
+                    aria-label="Imagen anterior"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    class="carousel-control next"
+                    type="button"
+                    data-carousel-next
+                    aria-label="Imagen siguiente"
+                  >
+                    ›
+                  </button>
+                  <div
+                    class="carousel-dots"
+                    aria-label="Seleccionar imagen"
+                  ></div>
+                </div>
+              </div>
+              <div class="room-copy">
+                <p class="room-kicker">Amplia</p>
+                <h3>Habitación grande</h3>
+                <p class="room-description">
+                  Mayor amplitud para quienes quieren más comodidad sin salir
+                  del concepto independiente y ordenado del residencial.
+                </p>
+                <div class="price-row">
+                  <span class="price">Q2,500</span>
+                  <span class="price-note">/ mes en adelante</span>
+                </div>
+                <ul class="feature-list">
+                  <li>Mayor espacio en un solo nivel</li>
+                  <li>Baño privado, clóset y cocineta</li>
+                  <li>Servicios incluidos en el precio base</li>
+                </ul>
+                <div class="room-actions">
+                  <a
+                    class="btn btn-primary js-room-whatsapp"
+                    href="#"
+                    data-room="habitación grande"
+                    >Consultar esta habitación</a
+                  >
+                  <span class="reference-pill">Fotos reales referenciales</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="room-showcase room-showcase-reverse">
+              <div class="room-media">
+                <div
+                  class="room-carousel"
+                  data-carousel
+                  data-room-key="loft"
+                  aria-label="Galería de loft de dos niveles"
+                  tabindex="0"
+                >
+                  <div class="carousel-viewport">
+                    <div class="carousel-track">
+                      <figure
+                        class="carousel-slide is-active"
+                        data-image-fallback
+                      >
+                        <img
+                          src="assets/rooms/loft/d333a653-d21e-46cf-84cc-ea4afd33f497.JPG"
+                          alt="Loft de dos niveles de referencia en Residencial El Maestro"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · loft 1</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Imagen real referencial · loft de dos niveles
+                        </figcaption>
+                      </figure>
+                      <figure class="carousel-slide" data-image-fallback>
+                        <img
+                          src="assets/rooms/loft/734b9b10-44ff-49d7-845c-34a9652e5119.JPG"
+                          alt="Área de sala o comedor de loft de referencia"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · loft 2</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Distribución puede variar según disponibilidad
+                        </figcaption>
+                      </figure>
+                      <figure class="carousel-slide" data-image-fallback>
+                        <img
+                          src="assets/rooms/loft/facfd911-a829-485f-89de-2ecac9b0d330.JPG"
+                          alt="Segundo nivel de descanso en loft de referencia"
+                          loading="lazy"
+                        />
+                        <span class="image-fallback"
+                          >Foto referencial pendiente · loft 3</span
+                        >
+                        <figcaption class="carousel-caption">
+                          Fotos reales del residencial, usadas como referencia
+                        </figcaption>
+                      </figure>
+                    </div>
+                  </div>
+                  <button
+                    class="carousel-control prev"
+                    type="button"
+                    data-carousel-prev
+                    aria-label="Imagen anterior"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    class="carousel-control next"
+                    type="button"
+                    data-carousel-next
+                    aria-label="Imagen siguiente"
+                  >
+                    ›
+                  </button>
+                  <div
+                    class="carousel-dots"
+                    aria-label="Seleccionar imagen"
+                  ></div>
+                </div>
+              </div>
+              <div class="room-copy">
+                <p class="room-kicker">Dos niveles</p>
+                <h3>Loft de 2 niveles</h3>
+                <p class="room-description">
+                  La opción más completa, con separación entre área social y
+                  descanso para una experiencia más amplia.
+                </p>
+                <div class="price-row">
+                  <span class="price">Q3,000</span>
+                  <span class="price-note">/ mes en adelante</span>
+                </div>
+                <ul class="feature-list">
+                  <li>Mini sala o comedor y cocineta</li>
+                  <li>Segundo nivel para descanso y clóset</li>
+                  <li>Servicios del residencial incluidos</li>
+                </ul>
+                <div class="room-actions">
+                  <a
+                    class="btn btn-primary js-room-whatsapp"
+                    href="#"
+                    data-room="loft de 2 niveles"
+                    >Consultar esta habitación</a
+                  >
+                  <span class="reference-pill">Fotos reales referenciales</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="servicios" aria-labelledby="servicios-title">
+        <div class="section-inner">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Incluido</span>
+              <h2 id="servicios-title">Servicios en todas las habitaciones</h2>
+            </div>
+            <p>
+              Mismo estándar de funcionamiento para todos los tipos de
+              habitación. El mobiliario de dormitorio corre por cuenta del
+              residente.
+            </p>
+          </div>
+          <ul class="service-grid" role="list">
+            <li>Agua caliente</li>
+            <li>Luz</li>
+            <li>Internet</li>
+            <li>Seguridad</li>
+            <li>Baño privado</li>
+            <li>Clóset</li>
+            <li>Lavadora compartida</li>
+            <li>Cocineta</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="condiciones" aria-labelledby="condiciones-title">
+        <div class="section-inner">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Requisitos</span>
+              <h2 id="condiciones-title">Condiciones del contrato</h2>
+            </div>
+            <p>
+              Contrato mínimo de seis meses, ambiente estable y reglas claras
+              para mantener la tranquilidad del residencial.
+            </p>
+          </div>
+          <div class="cond-grid">
+            <div class="cond-item">
+              <strong>Duración y contrato</strong>
+              <p>
+                Contrato mínimo <strong>6 meses</strong>. Costo del contrato:
+                <strong>Q100</strong>. Se firma presentando tu
+                <strong>DPI</strong>.
+              </p>
+            </div>
+            <div class="cond-item">
+              <strong>Perfil de residentes</strong>
+              <p>
+                Dirigido a <strong>personas estables</strong> (trabajadoras y
+                empleados). Espacios <strong>totalmente independientes</strong>.
+              </p>
+            </div>
+            <div class="cond-item">
+              <strong>Depósito de garantía</strong>
+              <p><strong>Q1,000</strong>, según lo acordado en el contrato.</p>
+            </div>
+            <div class="cond-item">
+              <strong>Ocupación</strong>
+              <p>
+                Incluida <strong>1 persona</strong>. Familiar adicional:
+                <strong>Q500</strong> mensuales.
+              </p>
+            </div>
+          </div>
+          <div class="alert-box" role="note">
+            <strong>Importante:</strong> No se aceptan
+            <strong>mascotas</strong>. No se alquilan habitaciones a
+            <strong>parejas</strong> (convivencia de pareja). El residencial
+            prioriza un entorno tranquilo y ordenado.
+          </div>
+        </div>
+      </section>
+
+      <section id="ubicacion" aria-labelledby="ubicacion-title">
+        <div class="section-inner">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Ubicación</span>
+              <h2 id="ubicacion-title">Zona residencial con buen acceso</h2>
+            </div>
+            <p>
+              Estamos en Colonia El Maestro, Zona 15, una ubicación conveniente
+              para moverse dentro de Ciudad de Guatemala.
+            </p>
+          </div>
+          <div class="location-block-wide">
+            <div>
+              <address class="location-address">
+                <strong>Residencial El Maestro</strong><br />
+                17 Avenida D 0-22<br />
+                Zona 15, Colonia El Maestro<br />
+                Ciudad de Guatemala
+              </address>
+              <p class="coords-line">Coordenadas: 14.594524, -90.497563</p>
+              <p style="margin: 0; color: var(--muted); font-size: 0.95rem">
+                Si necesitas ayuda al llegar, llama o escribe a
+                <strong>Julio</strong> (guardián).
+              </p>
+              <div class="map-actions">
+                <a
+                  class="btn btn-primary"
+                  href="https://www.google.com/maps/dir/?api=1&destination=14.594524,-90.497563"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Abrir ruta en Google Maps</a
+                >
+                <a
+                  class="btn btn-waze"
+                  href="https://www.waze.com/ul?ll=14.594524,-90.497563&navigate=yes"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Abrir ruta en Waze</a
+                >
+              </div>
+            </div>
+            <div class="map-embed-wrap">
+              <iframe
+                title="Mapa de Residencial El Maestro, 17 Avenida D 0-22 Zona 15"
+                src="https://maps.google.com/maps?q=14.594524,-90.497563&z=17&hl=es&output=embed"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                allowfullscreen
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="contacto" aria-labelledby="contacto-title">
+        <div class="section-inner">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Contacto</span>
+              <h2 id="contacto-title">Agenda tu visita con Julio</h2>
+            </div>
+            <p>
+              Escribe o llama para confirmar disponibilidad, horario de visita y
+              requisitos. Los datos bancarios se confirman al formalizar.
+            </p>
+          </div>
+          <p class="owner-signoff">Quedo atenta a cualquier duda.</p>
+          <div class="two-col">
+            <div class="info-box">
+              <h3>Julio, guardián</h3>
+              <dl>
+                <dt>Teléfono / WhatsApp</dt>
+                <dd><span class="placeholder" id="numero-guardian"></span></dd>
+                <dt>Horario para visitas</dt>
+                <dd>
+                  Lunes a viernes de 8:00 a.m. a 7:00 p.m.; sábados solo al
+                  mediodía.
+                </dd>
+                <dt>Llamada directa</dt>
+                <dd><a id="tel-guardian" href="#">Marcar a Julio</a></dd>
+              </dl>
+            </div>
+            <div class="info-box">
+              <h3>Pagos y formalización</h3>
+              <dl>
+                <dt>Depósito de garantía</dt>
+                <dd>Q1,000, según lo acordado en el contrato.</dd>
+                <dt>Costo de contrato</dt>
+                <dd>Q100 al momento de formalizar.</dd>
+                <dt>Datos de pago</dt>
+                <dd>
+                  Se comparten únicamente por privado al confirmar la
+                  habitación y formalizar el acuerdo.
+                </dd>
+                <dt>Recuerda</dt>
+                <dd>
+                  Conserva el comprobante y coordina la aplicación del pago
+                  según tu contrato.
+                </dd>
+              </dl>
+            </div>
+          </div>
+          <div style="text-align: center; margin-top: 2rem">
+            <a class="btn btn-primary" id="footer-whatsapp" href="#"
+              >Escribir por WhatsApp</a
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        <strong>Residencial El Maestro</strong> · 17 Avenida D 0-22, Zona 15,
+        Colonia El Maestro, Ciudad de Guatemala.
+      </p>
+      <p>
+        Información orientativa. Precios, fotos y disponibilidad sujetos a
+        confirmación al momento de la visita.
+      </p>
+    </footer>
+
+    <a class="btn btn-primary floating-whatsapp" id="floating-whatsapp" href="#"
+      >WhatsApp · Agendar visita</a
+    >
+
+    <script>
+      (function () {
+        var CONFIG = {
+          whatsappDigits: '50241211335',
+          guardianDisplay: '+502 4121 1335 · Julio',
+          guardianTelHref: 'tel:+50241211335',
+          whatsappMessage:
+            'Hola Julio, vi la página del Residencial El Maestro en Zona 15. Me gustaría coordinar una visita para conocer las habitaciones disponibles.',
+        };
+
+        var ROOM_GALLERIES = {
+          pequena: {
+            label: 'habitación pequeña',
+            images: [
+              'assets/rooms/pequena/2b844709-43dc-4147-8c91-f43468cf76c2.JPG',
+              'assets/rooms/pequena/3edbccc2-399b-45fd-8b19-da2fb1ba5af8.JPG',
+              'assets/rooms/pequena/46d58e55-4e5a-44f2-b73d-a95d7c1eaea3.JPG',
+              'assets/rooms/pequena/4bd11449-19ce-4967-b3d7-aa77992a866a.JPG',
+              'assets/rooms/pequena/6afcd744-8ea8-4eee-b2b7-712250355ccb.JPG',
+              'assets/rooms/pequena/6de2fe0b-6b5b-4e9f-8eaa-2d0da5150aa9.JPG',
+              'assets/rooms/pequena/70848717-33b2-492f-bf33-61820964dde2.JPG',
+              'assets/rooms/pequena/76d48958-d56b-4665-8bd4-05d911c9c6fc.JPG',
+              'assets/rooms/pequena/c92eb75f-72c4-4f20-9ba7-f739ec484b66.JPG',
+              'assets/rooms/pequena/cbb36c8c-ccd8-42a1-9ebf-d68cf610f56a.JPG',
+              'assets/rooms/pequena/f481e44d-cab9-4a9a-8041-dffca78d75b5.JPG',
+            ],
+          },
+          estandar: {
+            label: 'habitación estándar',
+            images: [
+              'assets/rooms/estandar/03e9ac0f-78dc-4f7a-a8a6-d50afd938ba1.JPG',
+              'assets/rooms/estandar/15cbc4f7-515e-412c-aece-5a7e236609ec.JPG',
+              'assets/rooms/estandar/29cdeea8-da04-4b82-9061-90b601b25f5b.JPG',
+              'assets/rooms/estandar/356d4472-4dd8-4e51-8e26-3f1d5ef73f8c.JPG',
+              'assets/rooms/estandar/3b20c1a6-bb8a-4800-b9d0-5643447869a7.JPG',
+              'assets/rooms/estandar/4205cc3d-3b4d-48f1-ba34-43cdc3d8aa36.JPG',
+              'assets/rooms/estandar/523faeac-95e9-42f2-a841-cddb63f2d51d.JPG',
+              'assets/rooms/estandar/76c372c3-fff2-48e4-8bcf-2e312875dcb1.JPG',
+              'assets/rooms/estandar/85de10d5-7496-45cc-814b-442e926531e7.JPG',
+              'assets/rooms/estandar/87179bd5-1697-48e0-9351-307946e209a3.JPG',
+              'assets/rooms/estandar/a09b9ddf-98d0-40be-800b-80349db37121.JPG',
+              'assets/rooms/estandar/b1c21e13-db61-4a2e-896e-ff4508b35e5d.JPG',
+              'assets/rooms/estandar/b6f06a77-4c37-4d86-af83-7fe2403d4a75.JPG',
+            ],
+          },
+          grande: {
+            label: 'habitación grande',
+            images: [
+              'assets/rooms/grande/0f58dbf4-c66d-48cd-ad4c-51edf95aa103.JPG',
+              'assets/rooms/grande/1d13579d-32ff-44c0-a514-a9429891aaa5.JPG',
+              'assets/rooms/grande/2001700f-2bb0-49aa-9764-a0ef9ca597a1.JPG',
+              'assets/rooms/grande/2a2d8edb-e9a7-4b21-9bcb-0f5e3b10cbb3.JPG',
+              'assets/rooms/grande/2fd277b5-1ea0-4041-80f3-16948f7e5981.JPG',
+              'assets/rooms/grande/461166fd-d566-436c-8a37-a846496ecd58.JPG',
+              'assets/rooms/grande/549baff3-a51c-4da8-9788-c82826fc4b6e.JPG',
+              'assets/rooms/grande/e9a5bb4d-052f-4bcd-9cf6-49aa764d9414.JPG',
+              'assets/rooms/grande/fdcd6712-7bb3-49bd-932d-af488f5f50b7.JPG',
+            ],
+          },
+          loft: {
+            label: 'loft de 2 niveles',
+            images: [
+              'assets/rooms/loft/10e1c9b3-ef51-4f5d-a668-b03a85cac73e.JPG',
+              'assets/rooms/loft/3fe9fabb-7a16-4e6d-b7b9-8580dbad996a.JPG',
+              'assets/rooms/loft/734b9b10-44ff-49d7-845c-34a9652e5119.JPG',
+              'assets/rooms/loft/806f1bcf-31dd-4b3f-a396-e622717a2376.JPG',
+              'assets/rooms/loft/88dbd9ca-73dd-4a14-a157-b42f00013e25.JPG',
+              'assets/rooms/loft/909efe90-fd91-416a-83ed-61cc77985de8.JPG',
+              'assets/rooms/loft/IMG_4985.jpg',
+              'assets/rooms/loft/IMG_4986.jpg',
+              'assets/rooms/loft/IMG_4987.jpg',
+              'assets/rooms/loft/IMG_4988.jpg',
+              'assets/rooms/loft/IMG_4989.jpg',
+              'assets/rooms/loft/IMG_4990.jpg',
+              'assets/rooms/loft/d333a653-d21e-46cf-84cc-ea4afd33f497.JPG',
+              'assets/rooms/loft/dec57726-4b38-47c6-bbbb-bc3e20966a43.JPG',
+              'assets/rooms/loft/facfd911-a829-485f-89de-2ecac9b0d330.JPG',
+            ],
+          },
+        };
+
+        function buildWhatsAppUrl(message) {
+          return (
+            'https://wa.me/' +
+            CONFIG.whatsappDigits +
+            '?text=' +
+            encodeURIComponent(message)
+          );
+        }
+
+        function initContactLinks() {
+          var guardianEl = document.getElementById('numero-guardian');
+          var telGuardian = document.getElementById('tel-guardian');
+
+          if (guardianEl) guardianEl.textContent = CONFIG.guardianDisplay;
+          if (telGuardian) telGuardian.href = CONFIG.guardianTelHref;
+
+          var defaultUrl = buildWhatsAppUrl(CONFIG.whatsappMessage);
+          [
+            'nav-whatsapp',
+            'hero-whatsapp',
+            'footer-whatsapp',
+            'floating-whatsapp',
+          ].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.href = defaultUrl;
+            el.setAttribute('target', '_blank');
+            el.setAttribute('rel', 'noopener noreferrer');
+          });
+
+          document.querySelectorAll('.js-room-whatsapp').forEach(function (el) {
+            var roomType = el.getAttribute('data-room') || 'una habitación';
+            var message =
+              'Hola Julio, vi la página del Residencial El Maestro en Zona 15. Me interesa consultar disponibilidad de ' +
+              roomType +
+              ' y coordinar una visita.';
+            el.href = buildWhatsAppUrl(message);
+            el.setAttribute('target', '_blank');
+            el.setAttribute('rel', 'noopener noreferrer');
+          });
+        }
+
+        function hydrateRoomGalleries() {
+          document.querySelectorAll('[data-carousel][data-room-key]').forEach(function (carousel) {
+            var roomKey = carousel.getAttribute('data-room-key');
+            var gallery = ROOM_GALLERIES[roomKey];
+            var track = carousel.querySelector('.carousel-track');
+
+            if (!gallery || !track || !gallery.images.length) return;
+
+            track.innerHTML = '';
+            gallery.images.forEach(function (src, index) {
+              var figure = document.createElement('figure');
+              figure.className = 'carousel-slide' + (index === 0 ? ' is-active' : '');
+              figure.setAttribute('data-image-fallback', '');
+
+              var img = document.createElement('img');
+              img.src = src;
+              img.alt =
+                'Foto ' +
+                (index + 1) +
+                ' de referencia de ' +
+                gallery.label +
+                ' en Residencial El Maestro';
+              img.loading = 'lazy';
+
+              var fallback = document.createElement('span');
+              fallback.className = 'image-fallback';
+              fallback.textContent =
+                'Foto referencial pendiente · ' + gallery.label + ' ' + (index + 1);
+
+              var caption = document.createElement('figcaption');
+              caption.className = 'carousel-caption';
+              caption.textContent =
+                index === 0
+                  ? 'Imagen real referencial · ' + gallery.label
+                  : 'Foto real referencial · distribución sujeta a disponibilidad';
+
+              figure.appendChild(img);
+              figure.appendChild(fallback);
+              figure.appendChild(caption);
+              track.appendChild(figure);
+            });
+          });
+        }
+
+        function initImageFallbacks() {
+          document
+            .querySelectorAll('[data-image-fallback]')
+            .forEach(function (frame) {
+              var img = frame.querySelector('img');
+              if (!img) return;
+
+              function markLoaded() {
+                frame.classList.add('has-image');
+                frame.classList.remove('is-missing');
+              }
+
+              function markMissing() {
+                frame.classList.add('is-missing');
+                frame.classList.remove('has-image');
+              }
+
+              if (img.complete && img.naturalWidth > 0) {
+                markLoaded();
+              } else if (img.complete && img.naturalWidth === 0) {
+                markMissing();
+              }
+
+              img.addEventListener('load', markLoaded);
+              img.addEventListener('error', markMissing);
+            });
+        }
+
+        function initCarousels() {
+          document
+            .querySelectorAll('[data-carousel]')
+            .forEach(function (carousel) {
+              var track = carousel.querySelector('.carousel-track');
+              var slides = Array.prototype.slice.call(
+                carousel.querySelectorAll('.carousel-slide')
+              );
+              var prev = carousel.querySelector('[data-carousel-prev]');
+              var next = carousel.querySelector('[data-carousel-next]');
+              var dotsWrap = carousel.querySelector('.carousel-dots');
+              var current = 0;
+              var touchStartX = null;
+
+              if (!track || slides.length === 0) return;
+
+              function renderDots() {
+                if (!dotsWrap) return;
+                dotsWrap.innerHTML = '';
+                slides.forEach(function (_, index) {
+                  var dot = document.createElement('button');
+                  dot.type = 'button';
+                  dot.className = 'carousel-dot';
+                  dot.setAttribute('aria-label', 'Ver imagen ' + (index + 1));
+                  dot.addEventListener('click', function () {
+                    goTo(index);
+                  });
+                  dotsWrap.appendChild(dot);
+                });
+              }
+
+              function goTo(index) {
+                current = (index + slides.length) % slides.length;
+                track.style.transform = 'translateX(-' + current * 100 + '%)';
+                slides.forEach(function (slide, slideIndex) {
+                  var isActive = slideIndex === current;
+                  slide.classList.toggle('is-active', isActive);
+                  slide.setAttribute(
+                    'aria-hidden',
+                    isActive ? 'false' : 'true'
+                  );
+                });
+                if (dotsWrap) {
+                  Array.prototype.slice
+                    .call(dotsWrap.children)
+                    .forEach(function (dot, dotIndex) {
+                      dot.classList.toggle('is-active', dotIndex === current);
+                      dot.setAttribute(
+                        'aria-current',
+                        dotIndex === current ? 'true' : 'false'
+                      );
+                    });
+                }
+              }
+
+              if (slides.length <= 1) {
+                if (prev) prev.hidden = true;
+                if (next) next.hidden = true;
+                if (dotsWrap) dotsWrap.hidden = true;
+                goTo(0);
+                return;
+              }
+
+              renderDots();
+              if (prev)
+                prev.addEventListener('click', function () {
+                  goTo(current - 1);
+                });
+              if (next)
+                next.addEventListener('click', function () {
+                  goTo(current + 1);
+                });
+              carousel.addEventListener('keydown', function (event) {
+                if (event.key === 'ArrowLeft') goTo(current - 1);
+                if (event.key === 'ArrowRight') goTo(current + 1);
+              });
+              carousel.addEventListener(
+                'touchstart',
+                function (event) {
+                  touchStartX = event.changedTouches[0].clientX;
+                },
+                { passive: true }
+              );
+              carousel.addEventListener(
+                'touchend',
+                function (event) {
+                  if (touchStartX === null) return;
+                  var delta = event.changedTouches[0].clientX - touchStartX;
+                  if (Math.abs(delta) > 45)
+                    goTo(current + (delta < 0 ? 1 : -1));
+                  touchStartX = null;
+                },
+                { passive: true }
+              );
+
+              goTo(0);
+            });
+        }
+
+        function initReveal() {
+          var cards = document.querySelectorAll('.room-showcase');
+          if (!('IntersectionObserver' in window)) {
+            cards.forEach(function (card) {
+              card.classList.add('is-visible');
+            });
+            return;
+          }
+
+          cards.forEach(function (card) {
+            card.classList.add('will-reveal');
+          });
+
+          var observer = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                if (!entry.isIntersecting) return;
+                entry.target.classList.add('is-visible');
+                observer.unobserve(entry.target);
+              });
+            },
+            { threshold: 0.18 }
+          );
+
+          cards.forEach(function (card) {
+            observer.observe(card);
+          });
+        }
+
+      function init() {
+        initContactLinks();
+        hydrateRoomGalleries();
+        initImageFallbacks();
+        initCarousels();
+        initReveal();
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', init);
+        } else {
+          init();
+        }
+      })();
+    </script>
+  </body>
 </html>
