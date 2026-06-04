@@ -176,6 +176,14 @@ export default function FinancesPanel() {
     setReceipts((prev) => prev.map((r) => r.receipt.id === receiptId ? { ...r, receipt: { ...r.receipt, verified: true } } : r))
   }
 
+  async function viewReceipt(storagePath: string) {
+    const { createClient } = await import("@/lib/supabase/client")
+    const supabase = createClient()
+    const { data, error } = await supabase.storage.from("receipts").createSignedUrl(storagePath, 300)
+    if (error || !data) { alert("No se pudo abrir el comprobante"); return }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer")
+  }
+
   const totalIncome = (summary?.fixedIncome ?? 0) + (summary?.variableIncome ?? 0)
   const totalExpenses = (summary?.fixedExpenses ?? 0) + (summary?.variableExpenses ?? 0)
   const net = totalIncome - totalExpenses
@@ -369,8 +377,8 @@ export default function FinancesPanel() {
                       <span className="text-xs text-gray-400 ml-2">Hab. {r.roomIdentifier}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <a href={r.receipt.storage_path} target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-[#24577a] hover:underline">Ver comprobante</a>
+                      <button onClick={() => viewReceipt(r.receipt.storage_path)}
+                        className="text-xs text-[#24577a] hover:underline">Ver comprobante</button>
                       {r.receipt.verified ? (
                         <span className="text-xs text-green-600 font-medium">✓ Verificado</span>
                       ) : (

@@ -105,26 +105,31 @@ function RoomCard({
         )}
 
         {/* Actions */}
-        <div className="flex flex-wrap gap-1.5 mt-auto">
-          <select
-            value={room.status}
-            onChange={(e) => handleStatus(e.target.value as Room["status"])}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none flex-1 min-w-0"
-          >
-            <option value="available">Disponible</option>
-            <option value="occupied">Ocupada</option>
-            <option value="expiring_soon">Vence pronto</option>
-            <option value="renovation">Remodelación</option>
-          </select>
+        <div className="flex items-center gap-1.5 mt-auto">
+          {/* Status dot — click to change */}
+          <div className="relative flex-shrink-0" title={`Estado: ${meta.label}`}>
+            <span className={`block w-6 h-6 rounded-full border-2 border-white shadow-sm ${meta.dot}`} />
+            <select
+              value={room.status}
+              onChange={(e) => handleStatus(e.target.value as Room["status"])}
+              aria-label="Cambiar estado"
+              className="absolute inset-0 w-6 h-6 opacity-0 cursor-pointer"
+            >
+              <option value="available">Disponible</option>
+              <option value="occupied">Ocupada</option>
+              <option value="expiring_soon">Vence pronto</option>
+              <option value="renovation">Remodelación</option>
+            </select>
+          </div>
 
           {room.status === "available" ? (
             <button onClick={() => setShowContract(true)}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-[#b64532] text-white font-medium hover:bg-[#9a3727] transition-colors">
+              className="flex-1 text-xs px-2.5 py-1.5 rounded-lg bg-[#b64532] text-white font-medium hover:bg-[#9a3727] transition-colors">
               + Contrato
             </button>
           ) : contract && (
             <button onClick={() => setShowContractInfo(true)}
-              className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+              className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
               Ver contrato
             </button>
           )}
@@ -133,7 +138,7 @@ function RoomCard({
               if (!confirm(`¿Terminar contrato de ${tenant?.name}?`)) return
               await onContractEnded(room.id)
             }}
-              className="text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
+              className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
               Terminar
             </button>
           )}
