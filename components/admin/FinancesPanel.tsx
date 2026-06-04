@@ -72,11 +72,18 @@ export default function FinancesPanel() {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
 
+      // Get room IDs for this property first
+      const { data: propertyRooms } = await supabase
+        .from("rooms")
+        .select("id")
+        .eq("property_id", propertyId)
+      const propertyRoomIds = (propertyRooms ?? []).map((r) => r.id)
+
       // Active contracts for this property this month
       const { data: contracts } = await supabase
         .from("contracts")
-        .select("*, tenant_profile:tenant_profiles(*), room:rooms!inner(identifier, property_id, room_type:room_types(price))")
-        .eq("room.property_id", propertyId)
+        .select("*, tenant_profile:tenant_profiles(*), room:rooms(identifier, property_id, room_type:room_types(price))")
+        .in("room_id", propertyRoomIds.length ? propertyRoomIds : ["none"])
         .eq("status", "active") as { data: (Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[] | null }
 
       setContracts(contracts ?? [])
