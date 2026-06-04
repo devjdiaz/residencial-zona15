@@ -77,6 +77,8 @@ export interface PaymentReceipt {
   file_hash: string | null
   uploaded_at: string
   verified: boolean
+  rejected: boolean
+  rejection_reason: string | null
 }
 
 export interface Expense {

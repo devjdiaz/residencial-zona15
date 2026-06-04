@@ -19,6 +19,8 @@ interface Receipt {
   verified: boolean
   storage_path: string
   file_hash: string | null
+  rejected: boolean
+  rejection_reason: string | null
 }
 
 export default function TenantDashboard() {
@@ -132,7 +134,9 @@ export default function TenantDashboard() {
           storage_path: path,
           file_hash: fileHash,
           verified: false,
-        })
+          rejected: false,
+          rejection_reason: null,
+        }, { onConflict: "contract_id,period_month" })
         .select()
         .single()
       if (recErr) throw recErr
@@ -221,25 +225,47 @@ export default function TenantDashboard() {
         {/* Upload receipt */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-3">Comprobante de pago</p>
-          {hasThisMonth ? (
-            <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-100 rounded-xl">
-              <span className="text-green-600 text-lg">✓</span>
-              <div>
-                <p className="text-sm font-medium text-green-800">Comprobante subido</p>
-                <p className="text-xs text-green-600">
-                  {receipts.find((r) => r.period_month === currentPeriod)?.verified
-                    ? "Verificado por la administradora"
-                    : "Pendiente de verificación"}
-                </p>
+          {hasThisMonth ? (() => {
+            const current = receipts.find((r) => r.period_month === currentPeriod)
+            if (current?.rejected) {
+              return (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <span className="text-red-600 text-lg">✕</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-red-800">Comprobante rechazado</p>
+                      <p className="text-xs text-red-600">
+                        {current.rejection_reason
+                          ? `Motivo: ${current.rejection_reason}`
+                          : "La administradora rechazó tu comprobante. Sube uno corregido."}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="mt-3 w-full py-2.5 rounded-lg bg-[#b64532] text-white text-sm font-medium hover:bg-[#9a3727] transition-colors disabled:opacity-60"
+                  >
+                    {uploading ? "Subiendo…" : "Subir comprobante corregido"}
+                  </button>
+                </div>
+              )
+            }
+            return (
+              <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-100 rounded-xl">
+                <span className="text-green-600 text-lg">✓</span>
+                <div>
+                  <p className="text-sm font-medium text-green-800">Comprobante subido</p>
+                  <p className="text-xs text-green-600">
+                    {current?.verified ? "Verificado por la administradora" : "Pendiente de verificación"}
+                  </p>
+                </div>
+                <button onClick={() => fileRef.current?.click()} className="ml-auto text-xs text-green-700 underline">
+                  Reemplazar
+                </button>
               </div>
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="ml-auto text-xs text-green-700 underline"
-              >
-                Reemplazar
-              </button>
-            </div>
-          ) : (
+            )
+          })() : (
             <div>
               <p className="text-sm text-gray-600 mb-3">Sube tu comprobante de pago de este mes.</p>
               <button
@@ -268,7 +294,9 @@ export default function TenantDashboard() {
                   <div className="flex items-center gap-2">
                     {r.verified
                       ? <span className="text-xs text-green-600 font-medium">✓ Verificado</span>
-                      : <span className="text-xs text-amber-500">Pendiente</span>
+                      : r.rejected
+                        ? <span className="text-xs text-red-500 font-medium">✕ Rechazado</span>
+                        : <span className="text-xs text-amber-500">Pendiente</span>
                     }
                   </div>
                 </div>

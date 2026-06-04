@@ -124,6 +124,8 @@ create table payment_receipts (
   storage_path       text not null,
   file_hash          text,
   uploaded_at        timestamptz not null default now(),
+  rejected           boolean not null default false,
+  rejection_reason   text,
   verified           boolean not null default false,
   unique (contract_id, period_month)
 );

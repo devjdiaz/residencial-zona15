@@ -172,8 +172,8 @@ export default function FinancesPanel() {
   async function verifyReceipt(receiptId: string) {
     const { createClient } = await import("@/lib/supabase/client")
     const supabase = createClient()
-    await supabase.from("payment_receipts").update({ verified: true }).eq("id", receiptId)
-    setReceipts((prev) => prev.map((r) => r.receipt.id === receiptId ? { ...r, receipt: { ...r.receipt, verified: true } } : r))
+    await supabase.from("payment_receipts").update({ verified: true, rejected: false, rejection_reason: null }).eq("id", receiptId)
+    setReceipts((prev) => prev.map((r) => r.receipt.id === receiptId ? { ...r, receipt: { ...r.receipt, verified: true, rejected: false, rejection_reason: null } } : r))
   }
 
   async function viewReceipt(storagePath: string) {
@@ -182,6 +182,19 @@ export default function FinancesPanel() {
     const { data, error } = await supabase.storage.from("receipts").createSignedUrl(storagePath, 300)
     if (error || !data) { alert("No se pudo abrir el comprobante"); return }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer")
+  }
+
+  async function rejectReceipt(receiptId: string) {
+    const reason = window.prompt("Motivo del rechazo (opcional):", "")
+    if (reason === null) return // cancelled
+    const { createClient } = await import("@/lib/supabase/client")
+    const supabase = createClient()
+    await supabase.from("payment_receipts")
+      .update({ verified: false, rejected: true, rejection_reason: reason || null })
+      .eq("id", receiptId)
+    setReceipts((prev) => prev.map((r) => r.receipt.id === receiptId
+      ? { ...r, receipt: { ...r.receipt, verified: false, rejected: true, rejection_reason: reason || null } }
+      : r))
   }
 
   const totalIncome = (summary?.fixedIncome ?? 0) + (summary?.variableIncome ?? 0)
@@ -371,21 +384,32 @@ export default function FinancesPanel() {
             ) : (
               <div className="divide-y divide-gray-50">
                 {receipts.map((r) => (
-                  <div key={r.receipt.id} className="py-3 flex items-center justify-between gap-4">
-                    <div>
-                      <span className="text-sm font-medium text-gray-800">{r.tenant.name}</span>
-                      <span className="text-xs text-gray-400 ml-2">Hab. {r.roomIdentifier}</span>
+                  <div key={r.receipt.id} className="py-3 flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div>
+                        <span className="text-sm font-medium text-gray-800">{r.tenant.name}</span>
+                        <span className="text-xs text-gray-400 ml-2">Hab. {r.roomIdentifier}</span>
+                      </div>
+                      {r.receipt.rejected && r.receipt.rejection_reason && (
+                        <p className="text-xs text-red-500 mt-0.5">Motivo: {r.receipt.rejection_reason}</p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <button onClick={() => viewReceipt(r.receipt.storage_path)}
-                        className="text-xs text-[#24577a] hover:underline">Ver comprobante</button>
+                        className="text-xs text-[#24577a] hover:underline">Ver</button>
                       {r.receipt.verified ? (
                         <span className="text-xs text-green-600 font-medium">✓ Verificado</span>
                       ) : (
-                        <button onClick={() => verifyReceipt(r.receipt.id)}
-                          className="text-xs px-2 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100 transition-colors border border-green-200">
-                          Marcar verificado
-                        </button>
+                        <>
+                          <button onClick={() => verifyReceipt(r.receipt.id)}
+                            className="text-xs px-2 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100 transition-colors border border-green-200">
+                            Aceptar
+                          </button>
+                          <button onClick={() => rejectReceipt(r.receipt.id)}
+                            className={`text-xs px-2 py-1 rounded transition-colors border ${r.receipt.rejected ? "bg-red-100 text-red-700 border-red-300" : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"}`}>
+                            {r.receipt.rejected ? "Rechazado" : "Rechazar"}
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
