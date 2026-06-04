@@ -32,17 +32,25 @@ const FALLBACK_ROOMS = [
 
 type AvailRoom = Pick<Room, "id" | "identifier" | "status"> & {
   property?: { name: string }
-  room_type?: { slug: string; label: string; price: number }
+  room_type?: { slug: string; label: string; price: number; room_photos?: { storage_path: string }[] } | null
 }
 
-function getPhotos(slug: string): readonly string[] {
-  const key = slug as keyof typeof ROOM_TYPES
-  return ROOM_TYPES[key]?.photos ?? []
+const SUPABASE_STORAGE = "https://murcjxwahkgwaauibgsu.supabase.co/storage/v1/object/public/room-photos"
+
+function getPhotos(room: AvailRoom): string[] {
+  // Prefer admin-uploaded photos from Supabase Storage
+  const dbPhotos = room.room_type?.room_photos
+  if (dbPhotos && dbPhotos.length > 0) {
+    return dbPhotos.map((p) => `${SUPABASE_STORAGE}/${p.storage_path}`)
+  }
+  // Fallback to local assets
+  const key = (room.room_type?.slug ?? "") as keyof typeof ROOM_TYPES
+  return [...(ROOM_TYPES[key]?.photos ?? [])]
 }
 
 function RoomCard({ room }: { room: AvailRoom }) {
   const [photoIdx, setPhotoIdx] = useState(0)
-  const photos = getPhotos(room.room_type?.slug ?? "")
+  const photos = getPhotos(room)
   const slug = room.room_type?.slug ?? "estandar"
   const waMsg = `Hola Julio, me interesa la Habitación ${room.identifier} (${room.room_type?.label ?? "habitación"} - Q${room.room_type?.price?.toLocaleString()}/mes) en Residencial ${room.property?.name ?? "El Maestro"}.`
 
@@ -144,7 +152,7 @@ export default function AvailabilitySection() {
 
         const { data } = await supabase
           .from("rooms")
-          .select("id, identifier, status, property:properties(name), room_type:room_types(slug, label, price)")
+          .select("id, identifier, status, property:properties(name), room_type:room_types(slug, label, price, room_photos(storage_path))")
           .eq("status", "available")
           .order("sort_order")
 
@@ -156,7 +164,7 @@ export default function AvailabilitySection() {
           .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, () => {
             supabase
               .from("rooms")
-              .select("id, identifier, status, property:properties(name), room_type:room_types(slug, label, price)")
+              .select("id, identifier, status, property:properties(name), room_type:room_types(slug, label, price, room_photos(storage_path))")
               .eq("status", "available")
               .order("sort_order")
               .then(({ data: refreshed }) => setRooms((refreshed as AvailRoom[] | null) ?? []))
