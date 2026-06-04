@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react"
 import type { Room, Contract, TenantProfile, RoomType } from "@/lib/supabase/types"
 import ContractDialog from "./ContractDialog"
+import ContractInfoDialog from "./ContractInfoDialog"
 import CredentialsDialog from "./CredentialsDialog"
 import RoomPhotoDialog from "./RoomPhotoDialog"
 
@@ -39,6 +40,7 @@ function RoomCard({
   const tenant = contract?.tenant_profile
   const [busy, setBusy] = useState(false)
   const [showContract, setShowContract] = useState(false)
+  const [showContractInfo, setShowContractInfo] = useState(false)
   const [showCredentials, setShowCredentials] = useState(false)
   const [showPhotos, setShowPhotos] = useState(false)
   const [photoCount, setPhotoCount] = useState(room.room_photos?.length ?? 0)
@@ -121,6 +123,12 @@ function RoomCard({
               + Contrato
             </button>
           ) : contract && (
+            <button onClick={() => setShowContractInfo(true)}
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+              Ver contrato
+            </button>
+          )}
+          {contract && (
             <button onClick={async () => {
               if (!confirm(`¿Terminar contrato de ${tenant?.name}?`)) return
               await onContractEnded(room.id)
@@ -156,6 +164,13 @@ function RoomCard({
         )}
       </div>
 
+      {showContractInfo && contract && (
+        <ContractInfoDialog
+          contract={contract}
+          roomIdentifier={room.identifier}
+          onClose={() => setShowContractInfo(false)}
+        />
+      )}
       {showContract && (
         <ContractDialog room={{ ...room, room_type: room.room_type ?? undefined }}
           onClose={() => setShowContract(false)}
