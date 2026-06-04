@@ -237,7 +237,15 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
       await sb.from("payment_receipts").delete().eq("contract_id", contract.id)
     }
     await sb.from("contracts").update({ status: "ended" }).eq("id", contract.id)
-    if (contract.tenant_profile_id) await sb.from("tenant_profiles").delete().eq("id", contract.tenant_profile_id)
+    // Delete auth user (frees credentials for next tenant)
+    if (contract.tenant_profile_id) {
+      await fetch("/api/admin/delete-tenant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantId: contract.tenant_profile_id }),
+      })
+      await sb.from("tenant_profiles").delete().eq("id", contract.tenant_profile_id)
+    }
     await sb.from("rooms").update({ status: "available" }).eq("id", roomId)
     await loadRooms()
   }

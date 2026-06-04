@@ -18,6 +18,7 @@ function generatePassword(length = 12) {
 export default function ContractDialog({ room, onClose, onCreated }: Props) {
   const today = new Date().toISOString().split("T")[0]
   const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
   const [startDate, setStartDate] = useState(today)
   const [durationMonths, setDurationMonths] = useState(6)
@@ -31,7 +32,6 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
     setLoading(true)
     setError(null)
 
-    const email = `hab${room.identifier.toLowerCase()}-${Date.now()}@inquilino.residencial15.app`
     const password = generatePassword()
 
     const start = new Date(startDate)
@@ -120,6 +120,15 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
                 placeholder="Nombre completo"
               />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Correo electrónico</label>
+              <input
+                type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                placeholder="inquilino@gmail.com"
+              />
+              <p className="text-xs text-gray-400 mt-1">Se usará para iniciar sesión en el portal de inquilinos.</p>
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">WhatsApp / Teléfono</label>
