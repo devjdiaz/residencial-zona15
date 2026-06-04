@@ -23,9 +23,20 @@ interface Receipt {
   rejection_reason: string | null
 }
 
+interface Charge { type: string; amount: number }
+
+const CHARGE_LABELS: Record<string, string> = {
+  additional_person: "Persona adicional",
+  parking: "Parqueo",
+  contract_signing: "Firma de contrato",
+  deposit: "Depósito",
+}
+
 export default function TenantDashboard() {
   const [info, setInfo] = useState<ContractInfo | null>(null)
   const [receipts, setReceipts] = useState<Receipt[]>([])
+  const [recurringItems, setRecurringItems] = useState<Charge[]>([])
+  const [oneTimeItems, setOneTimeItems] = useState<Charge[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -66,12 +77,29 @@ export default function TenantDashboard() {
           tenantName: (profile.name as string),
         })
 
+        const contractId = contract?.id as string
+
         const { data: rec } = await supabase
           .from("payment_receipts")
           .select("*")
-          .eq("contract_id", contract?.id as string)
+          .eq("contract_id", contractId)
           .order("period_month", { ascending: false })
         setReceipts((rec as Receipt[]) ?? [])
+
+        // Recurring monthly charges
+        const { data: recurring } = await supabase
+          .from("recurring_charges")
+          .select("type, amount")
+          .eq("contract_id", contractId)
+        setRecurringItems((recurring as Charge[]) ?? [])
+
+        // One-time charges (deposit, signing) — billed first month only
+        const { data: oneTime } = await supabase
+          .from("income_extras")
+          .select("type, amount")
+          .eq("contract_id", contractId)
+          .in("type", ["deposit", "contract_signing"])
+        setOneTimeItems((oneTime as Charge[]) ?? [])
       }
     }
     load()
@@ -166,6 +194,13 @@ export default function TenantDashboard() {
     return Math.ceil((due.getTime() - today.getTime()) / 86400000)
   })()
 
+  // Total a pagar: primer mes incluye depósito + firma; demás meses solo renta + recurrentes
+  const startMonth = info?.startDate ? info.startDate.slice(0, 7) : ""
+  const isFirstMonth = startMonth === currentPeriod
+  const recurringTotal = recurringItems.reduce((s, c) => s + c.amount, 0)
+  const oneTimeTotal = oneTimeItems.reduce((s, c) => s + c.amount, 0)
+  const totalToPay = (info?.price ?? 0) + recurringTotal + (isFirstMonth ? oneTimeTotal : 0)
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -217,6 +252,40 @@ export default function TenantDashboard() {
                     </span>
                   )}
                 </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Total a pagar */}
+        {info && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Total a pagar este mes</p>
+              {isFirstMonth && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Primer pago</span>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Renta {info.roomTypeLabel}</span>
+                <span className="text-gray-900">Q{info.price.toLocaleString()}</span>
+              </div>
+              {recurringItems.map((c, i) => (
+                <div key={`r-${i}`} className="flex justify-between text-sm">
+                  <span className="text-gray-500">{CHARGE_LABELS[c.type] ?? c.type}</span>
+                  <span className="text-gray-900">Q{c.amount.toLocaleString()}</span>
+                </div>
+              ))}
+              {isFirstMonth && oneTimeItems.map((c, i) => (
+                <div key={`o-${i}`} className="flex justify-between text-sm">
+                  <span className="text-gray-500">{CHARGE_LABELS[c.type] ?? c.type} <span className="text-xs text-gray-400">(único)</span></span>
+                  <span className="text-gray-900">Q{c.amount.toLocaleString()}</span>
+                </div>
+              ))}
+              <div className="flex justify-between pt-2 mt-1 border-t border-gray-100">
+                <span className="text-sm font-semibold text-gray-900">Total</span>
+                <span className="text-lg font-bold text-[#b64532]">Q{totalToPay.toLocaleString()}</span>
               </div>
             </div>
           </div>

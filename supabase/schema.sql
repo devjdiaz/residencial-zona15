@@ -208,6 +208,14 @@ create policy "tenant_own_receipts_read"   on payment_receipts for select using 
 create policy "tenant_own_receipts_insert" on payment_receipts for insert with check (tenant_profile_id = auth.uid());
 create policy "tenant_own_receipts_update" on payment_receipts for update using (tenant_profile_id = auth.uid());
 
+-- Tenant: read own charges (to show total to pay)
+create policy "tenant_own_extras_read" on income_extras for select using (
+  contract_id = (select contract_id from tenant_profiles where id = auth.uid())
+);
+create policy "tenant_own_recurring_read" on recurring_charges for select using (
+  contract_id = (select contract_id from tenant_profiles where id = auth.uid())
+);
+
 -- =============================================================
 -- Storage buckets (create in Supabase dashboard or via CLI)
 -- bucket: room-photos  (public)
