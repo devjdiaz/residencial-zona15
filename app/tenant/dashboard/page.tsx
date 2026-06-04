@@ -18,6 +18,7 @@ interface Receipt {
   uploaded_at: string
   verified: boolean
   storage_path: string
+  file_hash: string | null
 }
 
 export default function TenantDashboard() {
@@ -74,6 +75,14 @@ export default function TenantDashboard() {
     load()
   }, [])
 
+  async function computeHash(file: File): Promise<string> {
+    const buffer = await file.arrayBuffer()
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer)
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")
+  }
+
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -91,6 +100,24 @@ export default function TenantDashboard() {
         .eq("id", user.id)
         .single()
 
+      const contractId = (profile as unknown as Record<string, unknown>)?.contract_id as string
+
+      // Duplicate detection: block if same file already submitted for a different period
+      const fileHash = await computeHash(file)
+      const { data: existingReceipts } = await supabase
+        .from("payment_receipts")
+        .select("period_month, file_hash")
+        .eq("contract_id", contractId)
+        .not("file_hash", "is", null)
+      const duplicate = (existingReceipts ?? []).find(
+        (r) => r.file_hash === fileHash && r.period_month !== currentPeriod
+      )
+      if (duplicate) {
+        const [year, month] = duplicate.period_month.split("-")
+        const months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+        throw new Error(`Este comprobante ya fue enviado para ${months[Number(month) - 1]} ${year}. Sube el comprobante del mes actual.`)
+      }
+
       const path = `${user.id}/${currentPeriod}/${file.name}`
       const { error: storageErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: true })
       if (storageErr) throw storageErr
@@ -100,9 +127,10 @@ export default function TenantDashboard() {
         .from("payment_receipts")
         .upsert({
           tenant_profile_id: user.id,
-          contract_id: (profile as unknown as Record<string, unknown>)?.contract_id as string,
+          contract_id: contractId,
           period_month: currentPeriod,
           storage_path: path,
+          file_hash: fileHash,
           verified: false,
         })
         .select()

@@ -122,6 +122,7 @@ create table payment_receipts (
   contract_id        uuid references contracts on delete cascade not null,
   period_month       text not null,   -- 'YYYY-MM'
   storage_path       text not null,
+  file_hash          text,
   uploaded_at        timestamptz not null default now(),
   verified           boolean not null default false,
   unique (contract_id, period_month)

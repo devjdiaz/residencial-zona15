@@ -31,7 +31,7 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
     setLoading(true)
     setError(null)
 
-    const email = `hab${room.identifier.toLowerCase()}-${Date.now()}@residencial.local`
+    const email = `hab${room.identifier.toLowerCase()}-${Date.now()}@inquilino.residencial15.app`
     const password = generatePassword()
 
     const start = new Date(startDate)

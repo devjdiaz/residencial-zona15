@@ -74,6 +74,7 @@ export interface PaymentReceipt {
   contract_id: string
   period_month: string
   storage_path: string
+  file_hash: string | null
   uploaded_at: string
   verified: boolean
 }
