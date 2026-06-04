@@ -82,7 +82,7 @@ export default function FinancesPanel() {
       // Active contracts for this property this month
       const { data: contracts } = await supabase
         .from("contracts")
-        .select("*, tenant_profile:tenant_profiles(*), room:rooms(identifier, property_id, room_type:room_types(price))")
+        .select("*, tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(*), room:rooms(identifier, property_id, room_type:room_types(price))")
         .in("room_id", propertyRoomIds.length ? propertyRoomIds : ["none"])
         .eq("status", "active") as { data: (Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[] | null }
 

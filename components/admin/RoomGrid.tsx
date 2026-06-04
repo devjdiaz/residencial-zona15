@@ -215,7 +215,7 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
     const roomIds = (allRooms ?? []).map((r) => r.id)
     const { data: contracts } = await sb
       .from("contracts")
-      .select("*, tenant_profile:tenant_profiles(*)")
+      .select("*, tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(*)")
       .in("room_id", roomIds)
       .eq("status", "active")
 

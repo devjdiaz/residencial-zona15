@@ -43,7 +43,7 @@ export default function TenantDashboard() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: profile } = await (supabase as any)
         .from("tenant_profiles")
-        .select("*, contract:contracts(*, room:rooms(identifier, property:properties(name), room_type:room_types(label, price)))")
+        .select("*, contract:contracts!fk_contract(*, room:rooms(identifier, property:properties(name), room_type:room_types(label, price)))")
         .eq("id", user.id)
         .single() as { data: Record<string, unknown> | null }
 
