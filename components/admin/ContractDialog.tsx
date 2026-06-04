@@ -88,7 +88,10 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
 
       onCreated({ email, password })
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al crear contrato")
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? JSON.stringify(err)
+      setError(msg || "Error al crear contrato")
     } finally {
       setLoading(false)
     }
