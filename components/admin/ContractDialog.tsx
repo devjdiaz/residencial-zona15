@@ -40,20 +40,18 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
     const endDate = end.toISOString().split("T")[0]
 
     try {
+      // Create tenant user server-side (avoids replacing admin session)
+      const res = await fetch("/api/admin/create-tenant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+      const resData = await res.json()
+      if (!res.ok) throw new Error(resData.error ?? "No se pudo crear el usuario")
+      const tenantId: string = resData.userId
+
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
-
-      // Create tenant auth user via admin API (requires service key — fallback: just save profile)
-      // For now we save the profile and show credentials to admin
-      const { data: authData, error: authErr } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { role: "tenant" } },
-      })
-      if (authErr) throw authErr
-
-      const tenantId = authData.user?.id
-      if (!tenantId) throw new Error("No se pudo crear el usuario")
 
       // Create contract first (tenant_profile_id will be updated after)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
