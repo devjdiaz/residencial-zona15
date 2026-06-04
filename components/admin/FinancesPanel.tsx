@@ -7,6 +7,7 @@ const INCOME_LABELS: Record<string, string> = {
   additional_person: "Persona adicional",
   parking: "Parqueo",
   contract_signing: "Firma de contrato",
+  deposit: "Depósito",
 }
 
 const EXPENSE_LABELS: Record<string, string> = {

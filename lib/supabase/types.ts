@@ -8,7 +8,7 @@ export type ExpenseCategory =
   | "electricity"
   | "water"
 export type ExpenseType = "fixed" | "variable"
-export type IncomeExtraType = "additional_person" | "parking" | "contract_signing"
+export type IncomeExtraType = "additional_person" | "parking" | "contract_signing" | "deposit"
 
 export interface Property {
   id: string

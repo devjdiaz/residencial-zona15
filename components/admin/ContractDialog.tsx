@@ -27,6 +27,26 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Extras al inicio del contrato
+  const [extras, setExtras] = useState({
+    deposit:           { on: true,  amount: 1000 },
+    contract_signing:  { on: true,  amount: 150 },
+    additional_person: { on: false, amount: 500 },
+    parking:           { on: false, amount: 200 },
+  })
+  const EXTRA_LABELS: Record<keyof typeof extras, string> = {
+    deposit: "Depósito",
+    contract_signing: "Firma de contrato",
+    additional_person: "Persona adicional",
+    parking: "Parqueo",
+  }
+  function toggleExtra(key: keyof typeof extras) {
+    setExtras((p) => ({ ...p, [key]: { ...p[key], on: !p[key].on } }))
+  }
+  function setExtraAmount(key: keyof typeof extras, amount: number) {
+    setExtras((p) => ({ ...p, [key]: { ...p[key], amount } }))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -85,6 +105,22 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
       // 3. Link contract back to profile
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from("tenant_profiles").update({ contract_id: contractData.id }).eq("id", tenantId)
+
+      // 4. Insert checked extras as income
+      const extraRows = (Object.entries(extras) as [keyof typeof extras, { on: boolean; amount: number }][])
+        .filter(([, v]) => v.on && v.amount > 0)
+        .map(([type, v]) => ({
+          contract_id: contractData.id,
+          room_id: room.id,
+          type,
+          amount: v.amount,
+          date: startDate,
+        }))
+      if (extraRows.length) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: extrasErr } = await (supabase as any).from("income_extras").insert(extraRows)
+        if (extrasErr) throw extrasErr
+      }
 
       // Mark room occupied
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -171,6 +207,45 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
                 Ej: si firmó el 5, el pago vence cada mes el día 5.
               </p>
             </div>
+            {/* Extras / cobros iniciales */}
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-2">
+                Cobros al inicio del contrato
+              </label>
+              <div className="space-y-2">
+                {(Object.keys(extras) as (keyof typeof extras)[]).map((key) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleExtra(key)}
+                      className={`w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        extras[key].on ? "bg-[#b64532] border-[#b64532]" : "bg-white border-gray-300"
+                      }`}
+                    >
+                      {extras[key].on && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                      )}
+                    </button>
+                    <span className="text-sm text-gray-700 flex-1">{EXTRA_LABELS[key]}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-400">Q</span>
+                      <input
+                        type="number" min={0} value={extras[key].amount}
+                        disabled={!extras[key].on}
+                        onChange={(e) => setExtraAmount(key, Number(e.target.value))}
+                        className="w-20 px-2 py-1 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#b64532]/40 disabled:opacity-40"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                Lo marcado se suma a los ingresos del mes de inicio.
+              </p>
+            </div>
+
             <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 Mensaje de recordatorio WhatsApp (opcional)

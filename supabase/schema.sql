@@ -146,7 +146,7 @@ create table income_extras (
   id          uuid primary key default gen_random_uuid(),
   contract_id uuid references contracts on delete cascade not null,
   room_id     uuid references rooms on delete cascade not null,
-  type        text not null check (type in ('additional_person','parking','contract_signing')),
+  type        text not null check (type in ('additional_person','parking','contract_signing','deposit')),
   amount      numeric(10,2) not null,
   date        date not null default current_date,
   notes       text
