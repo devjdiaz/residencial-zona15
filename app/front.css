@@ -414,6 +414,52 @@ html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 .avail-empty.show { display: block; }
 
 /* ============================================================
+   AVAILABLE LISTINGS — per-room grid
+   ============================================================ */
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+.listing-card {
+  background: var(--surface);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: var(--rm-shadow-sm);
+  border: 1px solid var(--rm-border-soft);
+  transition: transform .28s cubic-bezier(.2,.7,.3,1), box-shadow .28s;
+  display: flex;
+  flex-direction: column;
+}
+.listing-card:hover { transform: translateY(-6px); box-shadow: var(--rm-shadow-lg); }
+.listing-photo {
+  position: relative;
+}
+.listing-photo .mini-car-wrap {
+  border-radius: 0;
+  box-shadow: none;
+}
+.listing-photo .badge,
+.listing-photo .price-chip { z-index: 4; }
+.listing-body {
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+.listing-body h3 { font-size: 20px; font-weight: 600; }
+.listing-meta { margin: 2px 0 0; font-size: 13.5px; color: var(--ink-faint); }
+.listing-body .btn { margin-top: auto; }
+
+@media (max-width: 860px) {
+  .listing-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .listing-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
    ROOM TYPES — alternating showcase
    ============================================================ */
 .showcase { display: grid; grid-template-columns: 1.05fr 1fr; gap: clamp(32px, 5vw, 80px); align-items: center; }

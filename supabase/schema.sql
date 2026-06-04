@@ -3,6 +3,17 @@
 -- Run in the Supabase SQL editor (Settings > SQL Editor)
 -- =============================================================
 
+-- ── Drop existing tables (safe re-run) ─────────────────────
+drop table if exists income_extras      cascade;
+drop table if exists payment_receipts   cascade;
+drop table if exists expenses           cascade;
+drop table if exists contracts          cascade;
+drop table if exists tenant_profiles    cascade;
+drop table if exists room_photos        cascade;
+drop table if exists rooms              cascade;
+drop table if exists room_types         cascade;
+drop table if exists properties         cascade;
+
 -- ── Properties ─────────────────────────────────────────────
 create table properties (
   id   uuid primary key default gen_random_uuid(),
@@ -11,9 +22,8 @@ create table properties (
   address text not null default ''
 );
 
-insert into properties (name, slug, address) values
-  ('El Maestro', 'el-maestro', '17 Avenida D 0-22, Zona 15, Colonia El Maestro, Ciudad de Guatemala'),
-  ('Tecún',      'tecun',      'Zona 15, Ciudad de Guatemala');
+insert into properties (name, slug, address) values ('El Maestro', 'el-maestro', 'Zona 15, Ciudad de Guatemala');
+insert into properties (name, slug, address) values ('Tecun', 'tecun', 'Zona 15, Ciudad de Guatemala');
 
 -- ── Room types ─────────────────────────────────────────────
 create table room_types (
@@ -24,20 +34,10 @@ create table room_types (
   description text not null default ''
 );
 
-insert into room_types (slug, label, price, description) values
-  ('pequena',  'Habitación Pequeña',  1600, 'Compacta y cálida, con todo lo necesario.'),
-  ('estandar', 'Habitación Estándar', 2000, 'El equilibrio perfecto: buen tamaño, bien ventilada.'),
-  ('grande',   'Habitación Grande',   2500, 'La más amplia. Baño propio y cama matrimonial.'),
-  ('loft',     'Loft de 2 Niveles',   3000, 'Espacio en dos niveles, ideal para trabajar desde casa.');
-
--- ── Room photos (managed by admin via Storage) ──────────────
-create table room_photos (
-  id            uuid primary key default gen_random_uuid(),
-  room_type_id  uuid references room_types on delete cascade,
-  storage_path  text not null,
-  display_order int  not null default 0,
-  created_at    timestamptz not null default now()
-);
+insert into room_types (slug, label, price, description) values ('pequena',  'Habitacion Pequena',  1600, 'Pequena y economica');
+insert into room_types (slug, label, price, description) values ('estandar', 'Habitacion Estandar', 2000, 'Estandar');
+insert into room_types (slug, label, price, description) values ('grande',   'Habitacion Grande',   2500, 'Grande con bano privado');
+insert into room_types (slug, label, price, description) values ('loft',     'Loft de 2 Niveles',   3000, 'Loft dos niveles');
 
 -- ── Rooms ──────────────────────────────────────────────────
 create table rooms (
@@ -51,7 +51,7 @@ create table rooms (
   unique (property_id, identifier)
 );
 
--- Seed El Maestro rooms (1–20 + lofts A–G)
+-- Seed El Maestro rooms (1-20 + lofts A-G)
 do $$
 declare
   p_id uuid := (select id from properties where slug = 'el-maestro');
@@ -68,7 +68,7 @@ begin
   end loop;
 end $$;
 
--- Seed Tecún rooms (1–21 + lofts 22–26)
+-- Seed Tecun rooms (1-26)
 do $$
 declare
   p_id uuid := (select id from properties where slug = 'tecun');
@@ -79,6 +79,15 @@ begin
     values (p_id, i::text, i);
   end loop;
 end $$;
+
+-- ── Room photos (managed by admin via Storage) ──────────────
+create table room_photos (
+  id            uuid primary key default gen_random_uuid(),
+  room_id       uuid references rooms on delete cascade not null,
+  storage_path  text not null,
+  display_order int  not null default 0,
+  created_at    timestamptz not null default now()
+);
 
 -- ── Tenant profiles ────────────────────────────────────────
 create table tenant_profiles (
@@ -96,7 +105,7 @@ create table contracts (
   tenant_profile_id  uuid references tenant_profiles on delete cascade not null,
   start_date         date not null,
   duration_months    int  not null default 6,
-  end_date           date not null generated always as (start_date + (duration_months || ' months')::interval)::date stored,
+  end_date           date not null,
   payment_day        int  not null default 1 check (payment_day between 1 and 31),
   whatsapp_template  text,
   status             text not null default 'active' check (status in ('active','ended')),
@@ -153,6 +162,11 @@ alter table tenant_profiles enable row level security;
 alter table payment_receipts enable row level security;
 alter table expenses        enable row level security;
 alter table income_extras   enable row level security;
+
+-- Grant table-level access to Supabase roles
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
 
 -- Public read for rooms (front office availability)
 create policy "rooms_public_read"   on rooms           for select using (true);

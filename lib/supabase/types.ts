@@ -27,7 +27,7 @@ export interface RoomType {
 
 export interface RoomPhoto {
   id: string
-  room_type_id: string
+  room_id: string
   storage_path: string
   display_order: number
   created_at: string
@@ -41,7 +41,8 @@ export interface Room {
   status: RoomStatus
   sort_order: number
   property?: Property
-  room_type?: RoomType & { room_photos?: RoomPhoto[] }
+  room_type?: RoomType
+  room_photos?: RoomPhoto[]
 }
 
 export interface Contract {
@@ -112,7 +113,7 @@ export interface Database {
       }
       room_photos: {
         Row: RoomPhoto
-        Insert: Omit<RoomPhoto, "id" | "created_at"> & { id?: string }
+        Insert: Omit<RoomPhoto, "id" | "created_at"> & { id?: string; room_id: string }
         Update: Partial<RoomPhoto>
       }
       rooms: {

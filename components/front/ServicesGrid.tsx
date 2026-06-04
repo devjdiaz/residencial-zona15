@@ -1,7 +1,7 @@
 const SERVICES = [
   {
-    label: "Wi-Fi de fibra",
-    desc: "Internet rápido y estable en toda la casa.",
+    label: "Wi-Fi incluido",
+    desc: "Internet disponible para todos los residentes.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 12.5a10 10 0 0114 0" />
@@ -32,11 +32,12 @@ const SERVICES = [
     ),
   },
   {
-    label: "Cocina equipada",
-    desc: "Estufa, refri y todo para cocinar a gusto.",
+    label: "Closet incluido",
+    desc: "Cada habitación viene con su propio closet.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M5 3v8M3 3v3a2 2 0 002 2M7 3v3a2 2 0 01-2 2M16 3a3 5 0 00-3 5c0 2 1 3 3 3v10M5 11v10" />
+        <rect x="2" y="3" width="20" height="18" rx="2" />
+        <path d="M12 3v18M8 8h2M14 8h2M8 12h2M14 12h2" />
       </svg>
     ),
   },

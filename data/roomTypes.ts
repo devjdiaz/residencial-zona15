@@ -5,11 +5,11 @@ export const ROOM_TYPES = {
     eyebrow: "Económica",
     price: 1600,
     description:
-      "Compacta y cálida, con todo lo necesario. La opción más accesible sin renunciar a la comodidad ni a los servicios.",
+      "Compacta y cálida. La opción más accesible del residencial, ideal si buscas un espacio propio sin gastar de más.",
     features: [
-      { label: "Cama individual", icon: "bed" },
-      { label: "Servicios incluidos", icon: "check" },
-      { label: "Cálida", icon: "sun" },
+      { label: "Agua y luz incluidos", icon: "check" },
+      { label: "Zona de lavandería", icon: "wind" },
+      { label: "Internet incluido", icon: "monitor" },
     ],
     photos: [
       "/assets/rooms/pequena/2b844709-43dc-4147-8c91-f43468cf76c2.JPG",
@@ -31,11 +31,11 @@ export const ROOM_TYPES = {
     eyebrow: "Estándar",
     price: 2000,
     description:
-      "El equilibrio perfecto: buen tamaño, cerca de áreas comunes y muy bien ventilada. La favorita de la casa.",
+      "El equilibrio perfecto: buen tamaño, bien ventilada y cerca de las áreas comunes. La más popular del residencial.",
     features: [
-      { label: "Cama individual", icon: "bed" },
-      { label: "Closet", icon: "list" },
-      { label: "Buena ventilación", icon: "wind" },
+      { label: "Agua y luz incluidos", icon: "check" },
+      { label: "Zona de lavandería", icon: "wind" },
+      { label: "Internet incluido", icon: "monitor" },
     ],
     photos: [
       "/assets/rooms/estandar/03e9ac0f-78dc-4f7a-a8a6-d50afd938ba1.JPG",
@@ -59,11 +59,11 @@ export const ROOM_TYPES = {
     eyebrow: "Premium",
     price: 2500,
     description:
-      "La más amplia de la casa. Baño propio, cama matrimonial y luz toda la mañana. Para quien quiere su rincón completo.",
+      "La más amplia del residencial. Baño privado y luz toda la mañana. Para quien quiere su espacio completo sin compartir.",
     features: [
       { label: "Baño privado", icon: "lock" },
-      { label: "Cama matrimonial", icon: "bed" },
-      { label: "Mucha luz", icon: "sun" },
+      { label: "Agua y luz incluidos", icon: "check" },
+      { label: "Internet incluido", icon: "monitor" },
     ],
     photos: [
       "/assets/rooms/grande/0f58dbf4-c66d-48cd-ad4c-51edf95aa103.JPG",
@@ -83,11 +83,11 @@ export const ROOM_TYPES = {
     eyebrow: "Iluminada",
     price: 3000,
     description:
-      "Dos ventanas, espacio en dos niveles. Se mantiene fresca y clara todo el día. Ideal si trabajas o estudias desde casa.",
+      "Espacio en dos niveles con doble ventana. Fresca y clara todo el día. Ideal si trabajas o estudias desde casa.",
     features: [
       { label: "2 niveles", icon: "layers" },
-      { label: "Cama matrimonial", icon: "bed" },
-      { label: "Espacio de trabajo", icon: "monitor" },
+      { label: "Agua y luz incluidos", icon: "check" },
+      { label: "Internet incluido", icon: "monitor" },
     ],
     photos: [
       "/assets/rooms/loft/10e1c9b3-ef51-4f5d-a668-b03a85cac73e.JPG",

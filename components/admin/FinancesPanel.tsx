@@ -3,6 +3,12 @@ import { useEffect, useState } from "react"
 import type { Contract, Expense, IncomeExtra, PaymentReceipt, TenantProfile } from "@/lib/supabase/types"
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+const INCOME_LABELS: Record<string, string> = {
+  additional_person: "Persona adicional",
+  parking: "Parqueo",
+  contract_signing: "Firma de contrato",
+}
+
 const EXPENSE_LABELS: Record<string, string> = {
   guardian_salary: "Sueldo guardián (compartido ÷2)",
   commission: "Comisión propietaria",
@@ -38,8 +44,11 @@ export default function FinancesPanel() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [incomeExtras, setIncomeExtras] = useState<IncomeExtra[]>([])
   const [loading, setLoading] = useState(false)
+  const [contracts, setContracts] = useState<(Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[]>([])
   const [addExpense, setAddExpense] = useState(false)
   const [newExpense, setNewExpense] = useState({ category: "electricity", amount: "", notes: "" })
+  const [addIncome, setAddIncome] = useState(false)
+  const [newIncome, setNewIncome] = useState({ type: "additional_person", amount: "", contractId: "", notes: "" })
 
   const period = `${year}-${String(month + 1).padStart(2, "0")}`
   const notConfigured = !process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -70,6 +79,7 @@ export default function FinancesPanel() {
         .eq("room.property_id", propertyId)
         .eq("status", "active") as { data: (Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[] | null }
 
+      setContracts(contracts ?? [])
       const fixedIncome = (contracts ?? []).reduce((sum, c) => sum + (c.room?.room_type?.price ?? 0), 0)
 
       // Income extras this period
@@ -134,6 +144,24 @@ export default function FinancesPanel() {
     setNewExpense({ category: "electricity", amount: "", notes: "" })
   }
 
+  async function saveIncome() {
+    if (!newIncome.amount || !newIncome.contractId) return
+    const contract = contracts.find((c) => c.id === newIncome.contractId)
+    if (!contract) return
+    const { createClient } = await import("@/lib/supabase/client")
+    const supabase = createClient()
+    await supabase.from("income_extras").insert({
+      contract_id: newIncome.contractId,
+      room_id: contract.room_id,
+      type: newIncome.type as IncomeExtra["type"],
+      amount: Number(newIncome.amount),
+      date: new Date().toISOString().split("T")[0],
+      notes: newIncome.notes || null,
+    })
+    setAddIncome(false)
+    setNewIncome({ type: "additional_person", amount: "", contractId: "", notes: "" })
+  }
+
   async function verifyReceipt(receiptId: string) {
     const { createClient } = await import("@/lib/supabase/client")
     const supabase = createClient()
@@ -186,6 +214,78 @@ export default function FinancesPanel() {
                 <p className={`text-2xl font-semibold mt-1 ${k.color}`}>Q{k.value.toLocaleString()}</p>
               </div>
             ))}
+          </div>
+
+          {/* Income extras */}
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium text-gray-900 text-sm">Ingresos extras — {MONTHS[month]} {year}</h3>
+              <button onClick={() => setAddIncome(!addIncome)}
+                className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors">
+                + Registrar ingreso extra
+              </button>
+            </div>
+
+            {addIncome && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-xl space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Habitación</label>
+                    <select value={newIncome.contractId} onChange={(e) => setNewIncome((p) => ({ ...p, contractId: e.target.value }))}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none">
+                      <option value="">— Seleccionar —</option>
+                      {contracts.map((c) => (
+                        <option key={c.id} value={c.id}>Hab. {c.room?.identifier} · {c.tenant_profile?.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Concepto</label>
+                    <select value={newIncome.type} onChange={(e) => setNewIncome((p) => ({ ...p, type: e.target.value }))}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none">
+                      {Object.entries(INCOME_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Monto (Q)</label>
+                    <input type="number" value={newIncome.amount} onChange={(e) => setNewIncome((p) => ({ ...p, amount: e.target.value }))}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none"
+                      placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Notas (opcional)</label>
+                    <input type="text" value={newIncome.notes} onChange={(e) => setNewIncome((p) => ({ ...p, notes: e.target.value }))}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none"
+                      placeholder="Ej: mes de julio" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={saveIncome} className="px-4 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">Guardar</button>
+                  <button onClick={() => setAddIncome(false)} className="px-4 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs">Cancelar</button>
+                </div>
+              </div>
+            )}
+
+            {incomeExtras.length === 0 ? (
+              <p className="text-xs text-gray-400 py-4 text-center">Sin ingresos extras este mes</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 border-b border-gray-100">
+                    <th className="text-left pb-2 font-medium">Concepto</th>
+                    <th className="text-right pb-2 font-medium">Monto</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {incomeExtras.map((e) => (
+                    <tr key={e.id}>
+                      <td className="py-2 text-gray-700">{INCOME_LABELS[e.type] ?? e.type}</td>
+                      <td className="py-2 text-right text-gray-900 font-medium">Q{e.amount.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Expenses detail */}

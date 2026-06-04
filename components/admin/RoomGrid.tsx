@@ -1,8 +1,9 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import type { Room, Contract, TenantProfile, RoomType } from "@/lib/supabase/types"
 import ContractDialog from "./ContractDialog"
 import CredentialsDialog from "./CredentialsDialog"
+import RoomPhotoDialog from "./RoomPhotoDialog"
 
 type RoomWithDetails = Room & {
   room_type?: RoomType | null
@@ -39,6 +40,8 @@ function RoomCard({
   const [busy, setBusy] = useState(false)
   const [showContract, setShowContract] = useState(false)
   const [showCredentials, setShowCredentials] = useState(false)
+  const [showPhotos, setShowPhotos] = useState(false)
+  const [photoCount, setPhotoCount] = useState(room.room_photos?.length ?? 0)
   const [newCredentials, setNewCredentials] = useState<{ email: string; password: string } | null>(null)
 
   const payDays = contract ? daysUntilPayment(contract.payment_day) : null
@@ -128,6 +131,19 @@ function RoomCard({
           )}
         </div>
 
+        {/* Photo button */}
+        <button
+          onClick={() => setShowPhotos(true)}
+          className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 w-full"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="M21 15l-5-5L5 21" />
+          </svg>
+          Fotos{photoCount > 0 ? ` (${photoCount})` : ""}
+        </button>
+
         {paymentDue && tenant && (
           <button onClick={waReminder}
             className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-1 w-full">
@@ -149,116 +165,14 @@ function RoomCard({
         <CredentialsDialog credentials={newCredentials} roomIdentifier={room.identifier}
           onClose={() => { setShowCredentials(false); setNewCredentials(null) }} />
       )}
-    </>
-  )
-}
-
-// ─── Photo Manager ────────────────────────────────────────────────────────────
-
-interface PhotoRecord { id: string; storage_path: string; display_order: number }
-
-function PhotoManager({ roomTypes }: { roomTypes: RoomType[] }) {
-  const [activeType, setActiveType] = useState<string>("")
-  const [photos, setPhotos] = useState<PhotoRecord[]>([])
-  const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (roomTypes.length && !activeType) setActiveType(roomTypes[0].id)
-  }, [roomTypes, activeType])
-
-  useEffect(() => {
-    if (!activeType) return
-    async function load() {
-      const { createClient } = await import("@/lib/supabase/client")
-      const sb = createClient()
-      const { data } = await sb.from("room_photos").select("*").eq("room_type_id", activeType).order("display_order")
-      setPhotos((data as PhotoRecord[]) ?? [])
-    }
-    load()
-  }, [activeType])
-
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    if (!files.length) return
-    setUploading(true); setError(null)
-    try {
-      const { createClient } = await import("@/lib/supabase/client")
-      const sb = createClient()
-      let order = photos.length
-      for (const file of files) {
-        const path = `${activeType}/${Date.now()}-${file.name}`
-        const { error: uploadErr } = await sb.storage.from("room-photos").upload(path, file, { upsert: false })
-        if (uploadErr) throw uploadErr
-        const { data } = await sb.from("room_photos").insert({ room_type_id: activeType, storage_path: path, display_order: order++ }).select().single()
-        if (data) setPhotos((p) => [...p, data as PhotoRecord])
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al subir")
-    } finally {
-      setUploading(false)
-      if (fileRef.current) fileRef.current.value = ""
-    }
-  }
-
-  async function handleDelete(photo: PhotoRecord) {
-    if (!confirm("¿Borrar esta foto?")) return
-    const { createClient } = await import("@/lib/supabase/client")
-    const sb = createClient()
-    await sb.storage.from("room-photos").remove([photo.storage_path])
-    await sb.from("room_photos").delete().eq("id", photo.id)
-    setPhotos((p) => p.filter((x) => x.id !== photo.id))
-  }
-
-  function photoUrl(path: string) {
-    return `https://murcjxwahkgwaauibgsu.supabase.co/storage/v1/object/public/room-photos/${path}`
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h3 className="font-medium text-gray-900 text-sm">Fotos por tipo de habitación</h3>
-        <div className="flex gap-1 bg-gray-50 border border-gray-100 rounded-xl p-1">
-          {roomTypes.map((t) => (
-            <button key={t.id} onClick={() => setActiveType(t.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${t.id === activeType ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
-              {t.label.replace("Habitación ", "").replace("Loft de ", "Loft ")}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Upload */}
-      <div className="mb-4">
-        <button onClick={() => fileRef.current?.click()} disabled={uploading}
-          className="px-4 py-2 rounded-lg bg-[#b64532] text-white text-xs font-medium hover:bg-[#9a3727] transition-colors disabled:opacity-60">
-          {uploading ? "Subiendo…" : "＋ Agregar fotos"}
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
-        {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
-        <p className="text-xs text-gray-400 mt-1">
-          Estas fotos se muestran en el carrusel del sitio público.
-          {photos.length === 0 && " Sin fotos aún — el sitio usa las fotos locales por defecto."}
-        </p>
-      </div>
-
-      {/* Photo grid */}
-      {photos.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-          {photos.map((p, i) => (
-            <div key={p.id} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photoUrl(p.storage_path)} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
-              <button onClick={() => handleDelete(p)}
-                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium">
-                Borrar
-              </button>
-            </div>
-          ))}
-        </div>
+      {showPhotos && (
+        <RoomPhotoDialog
+          roomId={room.id}
+          roomIdentifier={room.identifier}
+          onClose={(newCount) => { setShowPhotos(false); setPhotoCount(newCount) }}
+        />
       )}
-    </div>
+    </>
   )
 }
 
@@ -274,19 +188,21 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
     const { createClient } = await import("@/lib/supabase/client")
     const sb = createClient()
 
-    // Load room types
     const { data: types } = await sb.from("room_types").select("*").order("price")
     setRoomTypes((types as RoomType[]) ?? [])
 
-    // Load all rooms for this property
     const { data: allRooms } = await sb
-      .from("rooms").select("*, room_type:room_types(*)").eq("property_id", propertyId).order("sort_order")
+      .from("rooms")
+      .select("*, room_type:room_types(*), room_photos(*)")
+      .eq("property_id", propertyId)
+      .order("sort_order")
 
-    // Load active contracts
     const roomIds = (allRooms ?? []).map((r) => r.id)
     const { data: contracts } = await sb
-      .from("contracts").select("*, tenant_profile:tenant_profiles(*)")
-      .in("room_id", roomIds).eq("status", "active")
+      .from("contracts")
+      .select("*, tenant_profile:tenant_profiles(*)")
+      .in("room_id", roomIds)
+      .eq("status", "active")
 
     const contractMap = new Map((contracts ?? []).map((c) => [c.room_id, c]))
     const merged = (allRooms ?? []).map((r) => ({ ...r, contract: contractMap.get(r.id) ?? null }))
@@ -328,12 +244,9 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
 
   if (loading) {
     return (
-      <>
-        <div className="h-40 bg-gray-100 rounded-xl animate-pulse mb-6" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {Array.from({ length: 10 }).map((_, i) => <div key={i} className="h-40 bg-gray-100 rounded-xl animate-pulse" />)}
-        </div>
-      </>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {Array.from({ length: 10 }).map((_, i) => <div key={i} className="h-48 bg-gray-100 rounded-xl animate-pulse" />)}
+      </div>
     )
   }
 
@@ -342,15 +255,12 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
   }
 
   return (
-    <>
-      <PhotoManager roomTypes={roomTypes} />
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {rooms.map((room) => (
-          <RoomCard key={room.id} room={room} roomTypes={roomTypes}
-            onStatusChange={handleStatusChange} onTypeChange={handleTypeChange}
-            onContractCreated={loadRooms} onContractEnded={handleContractEnded} />
-        ))}
-      </div>
-    </>
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      {rooms.map((room) => (
+        <RoomCard key={room.id} room={room} roomTypes={roomTypes}
+          onStatusChange={handleStatusChange} onTypeChange={handleTypeChange}
+          onContractCreated={loadRooms} onContractEnded={handleContractEnded} />
+      ))}
+    </div>
   )
 }
