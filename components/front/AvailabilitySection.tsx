@@ -201,8 +201,6 @@ export default function AvailabilitySection() {
     trackRef.current?.scrollBy({ left: dir * step(), behavior: "smooth" })
   }
 
-  if (loading) return null
-
   const hasRooms = rooms.length > 0
 
   return (
@@ -219,7 +217,7 @@ export default function AvailabilitySection() {
               cuando se renta, desaparece.
             </p>
           </div>
-          {hasRooms && (
+          {!loading && hasRooms && (
             <div className="carousel-nav">
               <button
                 className="cbtn"
@@ -245,7 +243,23 @@ export default function AvailabilitySection() {
           )}
         </div>
 
-        {hasRooms ? (
+        {loading ? (
+          /* skeleton cards while Supabase loads */
+          <div className="carousel-wrap reveal d1">
+            <div className="carousel">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="room-card" style={{ minHeight: 340 }}>
+                  <div style={{ background: "#ece2d6", width: "100%", aspectRatio: "4/3" }} />
+                  <div className="room-body" style={{ gap: 12 }}>
+                    <div style={{ background: "#ece2d6", borderRadius: 8, height: 20, width: "70%" }} />
+                    <div style={{ background: "#ece2d6", borderRadius: 8, height: 14, width: "50%" }} />
+                    <div style={{ background: "#ece2d6", borderRadius: 100, height: 38, marginTop: "auto" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : hasRooms ? (
           <div className="carousel-wrap reveal d1">
             <div className="carousel" ref={trackRef}>
               {rooms.map((room) => (
