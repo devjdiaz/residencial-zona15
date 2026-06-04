@@ -53,7 +53,18 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
 
-      // Create contract first (tenant_profile_id will be updated after)
+      // 1. Create tenant profile first (contract_id set after)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: profileErr } = await (supabase as any).from("tenant_profiles").insert({
+        id: tenantId,
+        room_id: room.id,
+        contract_id: null,
+        name,
+        phone,
+      })
+      if (profileErr) throw profileErr
+
+      // 2. Create contract (tenant_profile now exists)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: contractData, error: contractErr } = await (supabase as any)
         .from("contracts")
@@ -71,16 +82,9 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
         .single()
       if (contractErr) throw contractErr
 
-      // Create tenant profile
+      // 3. Link contract back to profile
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: profileErr } = await (supabase as any).from("tenant_profiles").insert({
-        id: tenantId,
-        room_id: room.id,
-        contract_id: contractData.id,
-        name,
-        phone,
-      })
-      if (profileErr) throw profileErr
+      await (supabase as any).from("tenant_profiles").update({ contract_id: contractData.id }).eq("id", tenantId)
 
       // Mark room occupied
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
