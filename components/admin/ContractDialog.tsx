@@ -35,10 +35,10 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
     parking:           { on: false, amount: 200 },
   })
   const EXTRA_LABELS: Record<keyof typeof extras, string> = {
-    deposit: "Depósito",
-    contract_signing: "Firma de contrato",
-    additional_person: "Persona adicional",
-    parking: "Parqueo",
+    deposit: "Depósito (único)",
+    contract_signing: "Firma de contrato (único)",
+    additional_person: "Persona adicional (mensual)",
+    parking: "Parqueo (mensual)",
   }
   function toggleExtra(key: keyof typeof extras) {
     setExtras((p) => ({ ...p, [key]: { ...p[key], on: !p[key].on } }))
@@ -106,20 +106,26 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from("tenant_profiles").update({ contract_id: contractData.id }).eq("id", tenantId)
 
-      // 4. Insert checked extras as income
-      const extraRows = (Object.entries(extras) as [keyof typeof extras, { on: boolean; amount: number }][])
-        .filter(([, v]) => v.on && v.amount > 0)
-        .map(([type, v]) => ({
-          contract_id: contractData.id,
-          room_id: room.id,
-          type,
-          amount: v.amount,
-          date: startDate,
-        }))
-      if (extraRows.length) {
+      // 4a. One-time charges (deposit, signing) → income_extras at start date
+      const oneTimeTypes = ["deposit", "contract_signing"] as const
+      const oneTimeRows = oneTimeTypes
+        .filter((t) => extras[t].on && extras[t].amount > 0)
+        .map((type) => ({ contract_id: contractData.id, room_id: room.id, type, amount: extras[type].amount, date: startDate }))
+      if (oneTimeRows.length) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: extrasErr } = await (supabase as any).from("income_extras").insert(extraRows)
-        if (extrasErr) throw extrasErr
+        const { error: e1 } = await (supabase as any).from("income_extras").insert(oneTimeRows)
+        if (e1) throw e1
+      }
+
+      // 4b. Recurring charges (extra person, parking) → recurring_charges (billed monthly)
+      const recurringTypes = ["additional_person", "parking"] as const
+      const recurringRows = recurringTypes
+        .filter((t) => extras[t].on && extras[t].amount > 0)
+        .map((type) => ({ contract_id: contractData.id, room_id: room.id, type, amount: extras[type].amount }))
+      if (recurringRows.length) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: e2 } = await (supabase as any).from("recurring_charges").insert(recurringRows)
+        if (e2) throw e2
       }
 
       // Mark room occupied
@@ -242,7 +248,7 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
                 ))}
               </div>
               <p className="text-xs text-gray-400 mt-1.5">
-                Lo marcado se suma a los ingresos del mes de inicio.
+                Único: se cobra una vez al iniciar. Mensual: se suma a los ingresos cada mes.
               </p>
             </div>
 

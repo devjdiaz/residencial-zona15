@@ -101,6 +101,17 @@ export interface IncomeExtra {
   notes: string | null
 }
 
+export type RecurringChargeType = "additional_person" | "parking"
+
+export interface RecurringCharge {
+  id: string
+  contract_id: string
+  room_id: string
+  type: RecurringChargeType
+  amount: number
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -148,6 +159,11 @@ export interface Database {
         Row: IncomeExtra
         Insert: Omit<IncomeExtra, "id"> & { id?: string }
         Update: Partial<IncomeExtra>
+      }
+      recurring_charges: {
+        Row: RecurringCharge
+        Insert: Omit<RecurringCharge, "id" | "created_at"> & { id?: string }
+        Update: Partial<RecurringCharge>
       }
     }
   }

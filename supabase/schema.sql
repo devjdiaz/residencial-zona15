@@ -4,6 +4,7 @@
 -- =============================================================
 
 -- ── Drop existing tables (safe re-run) ─────────────────────
+drop table if exists recurring_charges  cascade;
 drop table if exists income_extras      cascade;
 drop table if exists payment_receipts   cascade;
 drop table if exists expenses           cascade;
@@ -141,7 +142,7 @@ create table expenses (
   notes       text
 );
 
--- ── Income extras ──────────────────────────────────────────
+-- ── Income extras (one-time charges) ───────────────────────
 create table income_extras (
   id          uuid primary key default gen_random_uuid(),
   contract_id uuid references contracts on delete cascade not null,
@@ -150,6 +151,16 @@ create table income_extras (
   amount      numeric(10,2) not null,
   date        date not null default current_date,
   notes       text
+);
+
+-- ── Recurring charges (monthly, billed with rent) ──────────
+create table recurring_charges (
+  id          uuid primary key default gen_random_uuid(),
+  contract_id uuid references contracts on delete cascade not null,
+  room_id     uuid references rooms on delete cascade not null,
+  type        text not null check (type in ('additional_person','parking')),
+  amount      numeric(10,2) not null,
+  created_at  timestamptz not null default now()
 );
 
 -- =============================================================
@@ -165,6 +176,7 @@ alter table tenant_profiles enable row level security;
 alter table payment_receipts enable row level security;
 alter table expenses        enable row level security;
 alter table income_extras   enable row level security;
+alter table recurring_charges enable row level security;
 
 -- Grant table-level access to Supabase roles
 grant usage on schema public to anon, authenticated, service_role;
@@ -184,6 +196,7 @@ create policy "admin_all_profiles"  on tenant_profiles for all using ((auth.jwt(
 create policy "admin_all_receipts"  on payment_receipts for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
 create policy "admin_all_expenses"  on expenses        for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
 create policy "admin_all_extras"    on income_extras   for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
+create policy "admin_all_recurring" on recurring_charges for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
 create policy "admin_all_photos"    on room_photos     for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
 
 -- Tenant: read own profile and contract, insert receipt for own contract

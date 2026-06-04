@@ -21,6 +21,7 @@ const EXPENSE_LABELS: Record<string, string> = {
 
 interface Summary {
   fixedIncome: number
+  recurringIncome: number
   variableIncome: number
   fixedExpenses: number
   variableExpenses: number
@@ -44,6 +45,7 @@ export default function FinancesPanel() {
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [incomeExtras, setIncomeExtras] = useState<IncomeExtra[]>([])
+  const [recurringCharges, setRecurringCharges] = useState<{ id: string; type: string; amount: number; room_id: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [contracts, setContracts] = useState<(Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[]>([])
   const [addExpense, setAddExpense] = useState(false)
@@ -88,9 +90,18 @@ export default function FinancesPanel() {
         .eq("status", "active") as { data: (Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[] | null }
 
       setContracts(contracts ?? [])
+      const activeContractIds = (contracts ?? []).map((c) => c.id)
       const fixedIncome = (contracts ?? []).reduce((sum, c) => sum + (c.room?.room_type?.price ?? 0), 0)
 
-      // Income extras this period
+      // Recurring charges (monthly) for active contracts
+      const { data: recurring } = await supabase
+        .from("recurring_charges")
+        .select("id, type, amount, room_id, contract_id")
+        .in("contract_id", activeContractIds.length ? activeContractIds : ["none"])
+      setRecurringCharges(recurring ?? [])
+      const recurringIncome = (recurring ?? []).reduce((sum, r) => sum + r.amount, 0)
+
+      // Income extras (one-time) this period
       const { data: extras } = await supabase
         .from("income_extras")
         .select("*")
@@ -111,7 +122,7 @@ export default function FinancesPanel() {
       const variableExpenses = (exp ?? []).filter((e) => e.type === "variable").reduce((sum, e) => sum + e.amount, 0)
       const commissions = (exp ?? []).filter((e) => e.category === "commission").reduce((sum, e) => sum + e.amount, 0)
 
-      setSummary({ fixedIncome, variableIncome, fixedExpenses, variableExpenses, commissions })
+      setSummary({ fixedIncome, recurringIncome, variableIncome, fixedExpenses, variableExpenses, commissions })
 
       // Payment receipts
       const contractIds = (contracts ?? []).map((c) => c.id)
@@ -198,7 +209,7 @@ export default function FinancesPanel() {
       : r))
   }
 
-  const totalIncome = (summary?.fixedIncome ?? 0) + (summary?.variableIncome ?? 0)
+  const totalIncome = (summary?.fixedIncome ?? 0) + (summary?.recurringIncome ?? 0) + (summary?.variableIncome ?? 0)
   const totalExpenses = (summary?.fixedExpenses ?? 0) + (summary?.variableExpenses ?? 0)
   const net = totalIncome - totalExpenses
 
@@ -233,7 +244,7 @@ export default function FinancesPanel() {
           {/* KPI cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: "Ingresos fijos", value: summary.fixedIncome, color: "text-green-700" },
+              { label: "Ingresos fijos", value: summary.fixedIncome + summary.recurringIncome, color: "text-green-700" },
               { label: "Ingresos variables", value: summary.variableIncome, color: "text-green-600" },
               { label: "Total egresos", value: totalExpenses, color: "text-red-600" },
               { label: "Neto del mes", value: net, color: net >= 0 ? "text-blue-700" : "text-red-700" },
@@ -244,6 +255,35 @@ export default function FinancesPanel() {
               </div>
             ))}
           </div>
+
+          {/* Recurring charges (monthly) */}
+          {recurringCharges.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <h3 className="font-medium text-gray-900 text-sm mb-3">Cargos recurrentes (mensuales)</h3>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 border-b border-gray-100">
+                    <th className="text-left pb-2 font-medium">Concepto</th>
+                    <th className="text-left pb-2 font-medium">Hab.</th>
+                    <th className="text-right pb-2 font-medium">Monto/mes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {recurringCharges.map((rc) => {
+                    const c = contracts.find((c) => c.room_id === rc.room_id)
+                    return (
+                      <tr key={rc.id}>
+                        <td className="py-2 text-gray-700">{INCOME_LABELS[rc.type] ?? rc.type}</td>
+                        <td className="py-2 text-gray-500">{c?.room?.identifier ?? "—"}</td>
+                        <td className="py-2 text-right text-gray-900 font-medium">Q{rc.amount.toLocaleString()}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              <p className="text-xs text-gray-400 mt-2">Se suman a los ingresos fijos cada mes mientras el contrato esté activo.</p>
+            </div>
+          )}
 
           {/* Income extras */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">
