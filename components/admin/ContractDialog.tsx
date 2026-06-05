@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
 import type { Room } from "@/lib/supabase/types"
+import { logAudit } from "@/lib/audit"
 
 interface Props {
   room: Room & { room_type?: { label: string; price: number } }
@@ -132,6 +133,7 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from("rooms").update({ status: "occupied" }).eq("id", room.id)
 
+      logAudit(`Creó contrato — Hab. ${room.identifier} (${name})`, "contract", room.identifier)
       onCreated({ email, password })
     } catch (err: unknown) {
       const msg = err instanceof Error

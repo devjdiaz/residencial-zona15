@@ -4,6 +4,8 @@
 -- =============================================================
 
 -- ── Drop existing tables (safe re-run) ─────────────────────
+drop table if exists issue_reports      cascade;
+drop table if exists audit_log          cascade;
 drop table if exists recurring_charges  cascade;
 drop table if exists income_extras      cascade;
 drop table if exists payment_receipts   cascade;
@@ -163,6 +165,32 @@ create table recurring_charges (
   created_at  timestamptz not null default now()
 );
 
+-- ── Audit log (bitácora — append only, super_admin reads) ──
+create table audit_log (
+  ticket      bigint generated always as identity primary key,
+  actor_id    uuid,
+  actor_email text,
+  actor_role  text,
+  action      text not null,
+  entity      text,
+  entity_ref  text,
+  created_at  timestamptz not null default now()
+);
+
+-- ── Issue reports (tenant-reported damages → backoffice tasks)
+create table issue_reports (
+  id                uuid primary key default gen_random_uuid(),
+  contract_id       uuid references contracts on delete cascade,
+  tenant_profile_id uuid references tenant_profiles on delete set null,
+  room_id           uuid references rooms on delete cascade not null,
+  property_id       uuid references properties on delete cascade not null,
+  tenant_name       text,
+  description       text not null,
+  status            text not null default 'open' check (status in ('open','in_progress','resolved')),
+  created_at        timestamptz not null default now(),
+  resolved_at       timestamptz
+);
+
 -- =============================================================
 -- Row Level Security
 -- =============================================================
@@ -177,6 +205,8 @@ alter table payment_receipts enable row level security;
 alter table expenses        enable row level security;
 alter table income_extras   enable row level security;
 alter table recurring_charges enable row level security;
+alter table audit_log       enable row level security;
+alter table issue_reports   enable row level security;
 
 -- Grant table-level access to Supabase roles
 grant usage on schema public to anon, authenticated, service_role;
@@ -189,15 +219,22 @@ create policy "types_public_read"   on room_types      for select using (true);
 create policy "photos_public_read"  on room_photos     for select using (true);
 create policy "props_public_read"   on properties      for select using (true);
 
--- Admin full access (role = 'admin' in user_metadata)
-create policy "admin_all_rooms"     on rooms           for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
-create policy "admin_all_contracts" on contracts       for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
-create policy "admin_all_profiles"  on tenant_profiles for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
-create policy "admin_all_receipts"  on payment_receipts for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
-create policy "admin_all_expenses"  on expenses        for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
-create policy "admin_all_extras"    on income_extras   for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
-create policy "admin_all_recurring" on recurring_charges for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
-create policy "admin_all_photos"    on room_photos     for all using ((auth.jwt()->'user_metadata'->>'role') = 'admin');
+-- Admin full access (role super_admin or admin in user_metadata)
+create policy "admin_all_rooms"     on rooms           for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "admin_all_contracts" on contracts       for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "admin_all_profiles"  on tenant_profiles for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "admin_all_receipts"  on payment_receipts for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "admin_all_expenses"  on expenses        for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "admin_all_extras"    on income_extras   for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "admin_all_recurring" on recurring_charges for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "admin_all_photos"    on room_photos     for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+
+-- Audit log: any admin can append; only super_admin can read; immutable
+create policy "audit_insert" on audit_log for insert with check ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "audit_super_read" on audit_log for select using ((auth.jwt()->'user_metadata'->>'role') = 'super_admin');
+
+-- Issue reports: admin full access
+create policy "admin_all_issues" on issue_reports for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
 
 -- Tenant: read own profile and contract, insert receipt for own contract
 create policy "tenant_own_profile"  on tenant_profiles  for select using (auth.uid() = id);
@@ -215,6 +252,10 @@ create policy "tenant_own_extras_read" on income_extras for select using (
 create policy "tenant_own_recurring_read" on recurring_charges for select using (
   contract_id = (select contract_id from tenant_profiles where id = auth.uid())
 );
+
+-- Tenant: report issues and read own reports
+create policy "tenant_own_issues_insert" on issue_reports for insert with check (tenant_profile_id = auth.uid());
+create policy "tenant_own_issues_read"   on issue_reports for select using (tenant_profile_id = auth.uid());
 
 -- =============================================================
 -- Storage buckets (create in Supabase dashboard or via CLI)

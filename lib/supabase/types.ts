@@ -112,6 +112,32 @@ export interface RecurringCharge {
   created_at: string
 }
 
+export interface AuditLog {
+  ticket: number
+  actor_id: string | null
+  actor_email: string | null
+  actor_role: string | null
+  action: string
+  entity: string | null
+  entity_ref: string | null
+  created_at: string
+}
+
+export type IssueStatus = "open" | "in_progress" | "resolved"
+
+export interface IssueReport {
+  id: string
+  contract_id: string | null
+  tenant_profile_id: string | null
+  room_id: string
+  property_id: string
+  tenant_name: string | null
+  description: string
+  status: IssueStatus
+  created_at: string
+  resolved_at: string | null
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -164,6 +190,16 @@ export interface Database {
         Row: RecurringCharge
         Insert: Omit<RecurringCharge, "id" | "created_at"> & { id?: string }
         Update: Partial<RecurringCharge>
+      }
+      audit_log: {
+        Row: AuditLog
+        Insert: Omit<AuditLog, "ticket" | "created_at">
+        Update: never
+      }
+      issue_reports: {
+        Row: IssueReport
+        Insert: Omit<IssueReport, "id" | "created_at" | "resolved_at"> & { id?: string; resolved_at?: string | null }
+        Update: Partial<IssueReport>
       }
     }
   }

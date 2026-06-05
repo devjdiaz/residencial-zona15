@@ -27,9 +27,10 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Admin routes — require admin role
+  // Admin routes — require an admin-type role (super_admin or admin)
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
-    if (!user || user.user_metadata?.role !== "admin") {
+    const role = user?.user_metadata?.role
+    if (!user || (role !== "super_admin" && role !== "admin")) {
       return NextResponse.redirect(new URL("/admin/login", request.url))
     }
   }

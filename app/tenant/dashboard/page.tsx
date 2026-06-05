@@ -25,6 +25,19 @@ interface Receipt {
 
 interface Charge { type: string; amount: number }
 
+interface IssueRow {
+  id: string
+  description: string
+  status: "open" | "in_progress" | "resolved"
+  created_at: string
+}
+
+const ISSUE_STATUS_LABELS: Record<string, string> = {
+  open: "Abierto",
+  in_progress: "En proceso",
+  resolved: "Resuelto",
+}
+
 const CHARGE_LABELS: Record<string, string> = {
   additional_person: "Persona adicional",
   parking: "Parqueo",
@@ -42,6 +55,14 @@ export default function TenantDashboard() {
   const [loggingOut, setLoggingOut] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Reportes de problemas
+  const [reportCtx, setReportCtx] = useState<{ contractId: string; roomId: string; propertyId: string; tenantName: string } | null>(null)
+  const [issues, setIssues] = useState<IssueRow[]>([])
+  const [showReport, setShowReport] = useState(false)
+  const [reportText, setReportText] = useState("")
+  const [reportBusy, setReportBusy] = useState(false)
+  const [reportError, setReportError] = useState<string | null>(null)
+
   const now = new Date()
   const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
   const hasThisMonth = receipts.some((r) => r.period_month === currentPeriod)
@@ -56,7 +77,7 @@ export default function TenantDashboard() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: profile } = await (supabase as any)
         .from("tenant_profiles")
-        .select("*, contract:contracts!fk_contract(*, room:rooms(identifier, property:properties(name), room_type:room_types(label, price)))")
+        .select("*, contract:contracts!fk_contract(*, room:rooms(id, identifier, property_id, property:properties(name), room_type:room_types(label, price)))")
         .eq("id", user.id)
         .single() as { data: Record<string, unknown> | null }
 
@@ -100,10 +121,58 @@ export default function TenantDashboard() {
           .eq("contract_id", contractId)
           .in("type", ["deposit", "contract_signing"])
         setOneTimeItems((oneTime as Charge[]) ?? [])
+
+        // Report context (for issue reports)
+        setReportCtx({
+          contractId,
+          roomId: (room?.id as string) ?? (contract?.room_id as string),
+          propertyId: (room?.property_id as string) ?? "",
+          tenantName: (profile.name as string) ?? "",
+        })
+
+        // Tenant's own issue reports
+        const { data: myIssues } = await supabase
+          .from("issue_reports")
+          .select("id, description, status, created_at")
+          .eq("tenant_profile_id", user.id)
+          .order("created_at", { ascending: false })
+        setIssues((myIssues as IssueRow[]) ?? [])
       }
     }
     load()
   }, [])
+
+  async function submitReport(e: React.FormEvent) {
+    e.preventDefault()
+    if (!reportText.trim() || !reportCtx) return
+    setReportBusy(true); setReportError(null)
+    try {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("No autenticado")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from("issue_reports")
+        .insert({
+          contract_id: reportCtx.contractId,
+          tenant_profile_id: user.id,
+          room_id: reportCtx.roomId,
+          property_id: reportCtx.propertyId,
+          tenant_name: reportCtx.tenantName,
+          description: reportText.trim(),
+        })
+        .select("id, description, status, created_at")
+        .single()
+      if (error) throw error
+      setIssues((p) => [data as IssueRow, ...p])
+      setShowReport(false); setReportText("")
+    } catch (err: unknown) {
+      setReportError(err instanceof Error ? err.message : "Error al enviar el reporte")
+    } finally {
+      setReportBusy(false)
+    }
+  }
 
   async function computeHash(file: File): Promise<string> {
     const buffer = await file.arrayBuffer()
@@ -373,6 +442,56 @@ export default function TenantDashboard() {
             </div>
           </div>
         )}
+
+        {/* Reportar problema */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Reportar un problema</p>
+            <button
+              onClick={() => setShowReport((s) => !s)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-[#b64532] text-white font-medium hover:bg-[#9a3727] transition-colors"
+            >
+              {showReport ? "Cancelar" : "Reportar problema"}
+            </button>
+          </div>
+
+          {showReport && (
+            <form onSubmit={submitReport} className="space-y-2 mb-3">
+              <textarea
+                value={reportText} onChange={(e) => setReportText(e.target.value)} rows={3} required
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40 resize-none"
+                placeholder="Describe el daño o avería (ej: gotea la regadera del baño, no calienta el agua, foco quemado en la cocina...)"
+              />
+              {reportError && <p className="text-xs text-red-600">{reportError}</p>}
+              <button type="submit" disabled={reportBusy}
+                className="w-full py-2.5 rounded-lg bg-[#b64532] text-white text-sm font-medium hover:bg-[#9a3727] transition-colors disabled:opacity-60">
+                {reportBusy ? "Enviando…" : "Enviar reporte"}
+              </button>
+            </form>
+          )}
+
+          {issues.length === 0 ? (
+            <p className="text-xs text-gray-400">Aún no has reportado problemas.</p>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {issues.map((it) => (
+                <div key={it.id} className="py-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm text-gray-700 flex-1">{it.description}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                      it.status === "resolved" ? "bg-green-50 text-green-700 border-green-200"
+                      : it.status === "in_progress" ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}>
+                      {ISSUE_STATUS_LABELS[it.status]}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">{new Date(it.created_at).toLocaleDateString("es-GT")}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   )
