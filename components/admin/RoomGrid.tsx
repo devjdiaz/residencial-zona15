@@ -5,6 +5,7 @@ import ContractDialog from "./ContractDialog"
 import ContractInfoDialog from "./ContractInfoDialog"
 import CredentialsDialog from "./CredentialsDialog"
 import RoomPhotoDialog from "./RoomPhotoDialog"
+import { logAudit } from "@/lib/audit"
 
 type RoomWithDetails = Room & {
   room_type?: RoomType | null
@@ -236,6 +237,8 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
     const { createClient } = await import("@/lib/supabase/client")
     await createClient().from("rooms").update({ status }).eq("id", id)
     setRooms((p) => p.map((r) => r.id === id ? { ...r, status } : r))
+    const room = rooms.find((r) => r.id === id)
+    logAudit(`Cambió estado — Hab. ${room?.identifier ?? id} → ${STATUS_META[status].label}`, "room", room?.identifier)
   }
 
   async function handleTypeChange(id: string, typeId: string | null) {
@@ -243,6 +246,8 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
     await createClient().from("rooms").update({ type_id: typeId }).eq("id", id)
     const type = roomTypes.find((t) => t.id === typeId) ?? null
     setRooms((p) => p.map((r) => r.id === id ? { ...r, type_id: typeId, room_type: type ?? undefined } : r))
+    const room = rooms.find((r) => r.id === id)
+    logAudit(`Cambió tipo — Hab. ${room?.identifier ?? id} → ${type?.label ?? "sin tipo"}`, "room", room?.identifier)
   }
 
   async function handleContractEnded(roomId: string) {
@@ -267,6 +272,8 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
       await sb.from("tenant_profiles").delete().eq("id", contract.tenant_profile_id)
     }
     await sb.from("rooms").update({ status: "available" }).eq("id", roomId)
+    const tenantName = (contract as RoomWithDetails["contract"])?.tenant_profile?.name
+    logAudit(`Terminó contrato — Hab. ${room?.identifier ?? roomId}${tenantName ? ` (${tenantName})` : ""}`, "contract", room?.identifier)
     await loadRooms()
   }
 

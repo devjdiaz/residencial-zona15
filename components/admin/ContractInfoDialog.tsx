@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
 import type { Contract, TenantProfile } from "@/lib/supabase/types"
+import { logAudit } from "@/lib/audit"
 
 interface Props {
   contract: Contract & { tenant_profile?: TenantProfile }
@@ -35,6 +36,7 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose }
       })
       if (!res.ok) throw new Error("Error al resetear")
       setNewPassword(pwd)
+      logAudit(`Reinició contraseña — Hab. ${roomIdentifier}${tenant?.name ? ` (${tenant.name})` : ""}`, "tenant", roomIdentifier)
     } catch {
       alert("Error al resetear la contraseña")
     } finally {

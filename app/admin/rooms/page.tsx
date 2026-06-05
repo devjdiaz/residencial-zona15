@@ -1,5 +1,5 @@
 import AdminHeader from "@/components/admin/AdminHeader"
-import RoomGrid from "@/components/admin/RoomGrid"
+import RoomsView from "@/components/admin/RoomsView"
 import { createClient } from "@/lib/supabase/server"
 
 async function getProperties() {
@@ -14,14 +14,8 @@ async function getProperties() {
   return data ?? []
 }
 
-export default async function AdminRoomsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ property?: string }>
-}) {
-  const params = await searchParams
+export default async function AdminRoomsPage() {
   const properties = await getProperties()
-  const activePropertyId = params.property ?? properties[0]?.id
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -33,39 +27,7 @@ export default async function AdminRoomsPage({
           <p className="text-sm text-gray-500 mt-0.5">Gestión de disponibilidad y contratos</p>
         </div>
 
-        {/* Property tabs */}
-        <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 w-fit mb-6">
-          {properties.map((p) => (
-            <a
-              key={p.id}
-              href={`/admin/rooms?property=${p.id}`}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                p.id === activePropertyId
-                  ? "bg-[#b64532] text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {p.name}
-            </a>
-          ))}
-        </div>
-
-        {/* Status legend */}
-        <div className="flex flex-wrap gap-4 mb-5 text-xs text-gray-500">
-          {[
-            { dot: "bg-green-500", label: "Disponible" },
-            { dot: "bg-red-500", label: "Ocupada" },
-            { dot: "bg-yellow-400", label: "Vence pronto (≤30 días)" },
-            { dot: "bg-gray-800", label: "Remodelación" },
-          ].map((s) => (
-            <span key={s.label} className="flex items-center gap-1.5">
-              <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
-              {s.label}
-            </span>
-          ))}
-        </div>
-
-        <RoomGrid propertyId={activePropertyId ?? ""} />
+        <RoomsView properties={properties} />
       </main>
     </div>
   )

@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
 import type { RoomPhoto } from "@/lib/supabase/types"
+import { logAudit } from "@/lib/audit"
 
 interface Props {
   roomId: string
@@ -54,6 +55,7 @@ export default function RoomPhotoDialog({ roomId, roomIdentifier, onClose }: Pro
           .single()
         if (data) setPhotos((p) => [...p, data as RoomPhoto])
       }
+      logAudit(`Subió ${files.length} foto(s) — Hab. ${roomIdentifier}`, "photo", roomIdentifier)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al subir")
     } finally {
@@ -69,6 +71,7 @@ export default function RoomPhotoDialog({ roomId, roomIdentifier, onClose }: Pro
     await sb.storage.from("room-photos").remove([photo.storage_path])
     await sb.from("room_photos").delete().eq("id", photo.id)
     setPhotos((p) => p.filter((x) => x.id !== photo.id))
+    logAudit(`Borró foto — Hab. ${roomIdentifier}`, "photo", roomIdentifier)
   }
 
   return (

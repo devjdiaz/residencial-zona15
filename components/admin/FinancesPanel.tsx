@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import type { Contract, Expense, IncomeExtra, PaymentReceipt, TenantProfile } from "@/lib/supabase/types"
+import { logAudit } from "@/lib/audit"
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 const INCOME_LABELS: Record<string, string> = {
@@ -159,6 +160,7 @@ export default function FinancesPanel() {
       period,
       notes: newExpense.notes || null,
     })
+    logAudit(`Agregó egreso — ${EXPENSE_LABELS[newExpense.category] ?? newExpense.category} Q${Number(newExpense.amount).toLocaleString()}`, "expense")
     setAddExpense(false)
     setNewExpense({ category: "electricity", amount: "", notes: "" })
   }
@@ -177,6 +179,7 @@ export default function FinancesPanel() {
       date: new Date().toISOString().split("T")[0],
       notes: newIncome.notes || null,
     })
+    logAudit(`Agregó ingreso extra — ${INCOME_LABELS[newIncome.type] ?? newIncome.type} Q${Number(newIncome.amount).toLocaleString()} (Hab. ${contract.room?.identifier ?? ""})`, "income")
     setAddIncome(false)
     setNewIncome({ type: "additional_person", amount: "", contractId: "", notes: "" })
   }
@@ -186,6 +189,8 @@ export default function FinancesPanel() {
     const supabase = createClient()
     await supabase.from("payment_receipts").update({ verified: true, rejected: false, rejection_reason: null }).eq("id", receiptId)
     setReceipts((prev) => prev.map((r) => r.receipt.id === receiptId ? { ...r, receipt: { ...r.receipt, verified: true, rejected: false, rejection_reason: null } } : r))
+    const r = receipts.find((x) => x.receipt.id === receiptId)
+    logAudit(`Aceptó comprobante — Hab. ${r?.roomIdentifier ?? ""} · ${r?.receipt.period_month ?? period}`, "receipt", r?.roomIdentifier)
   }
 
   async function viewReceipt(storagePath: string) {
@@ -207,6 +212,8 @@ export default function FinancesPanel() {
     setReceipts((prev) => prev.map((r) => r.receipt.id === receiptId
       ? { ...r, receipt: { ...r.receipt, verified: false, rejected: true, rejection_reason: reason || null } }
       : r))
+    const r = receipts.find((x) => x.receipt.id === receiptId)
+    logAudit(`Rechazó comprobante — Hab. ${r?.roomIdentifier ?? ""} · ${r?.receipt.period_month ?? period}${reason ? ` (${reason})` : ""}`, "receipt", r?.roomIdentifier)
   }
 
   const totalIncome = (summary?.fixedIncome ?? 0) + (summary?.recurringIncome ?? 0) + (summary?.variableIncome ?? 0)
