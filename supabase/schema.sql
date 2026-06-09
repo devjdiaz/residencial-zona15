@@ -213,6 +213,13 @@ grant usage on schema public to anon, authenticated, service_role;
 grant all on all tables in schema public to anon, authenticated, service_role;
 grant all on all sequences in schema public to anon, authenticated, service_role;
 
+-- Helper: read current user role from auth.users (SECURITY DEFINER bypasses auth schema restriction)
+create or replace function public.current_user_role()
+returns text language sql security definer stable
+set search_path = public as $$
+  select raw_user_meta_data->>'role' from auth.users where id = auth.uid()
+$$;
+
 -- Public read for rooms (front office availability)
 create policy "rooms_public_read"   on rooms           for select using (true);
 create policy "types_public_read"   on room_types      for select using (true);
@@ -227,7 +234,9 @@ create policy "admin_all_receipts"  on payment_receipts for all using ((auth.jwt
 create policy "admin_all_expenses"  on expenses        for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
 create policy "admin_all_extras"    on income_extras   for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
 create policy "admin_all_recurring" on recurring_charges for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
-create policy "admin_all_photos"    on room_photos     for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "admin_all_photos"    on room_photos     for all
+  using      (public.current_user_role() in ('super_admin','admin'))
+  with check (public.current_user_role() in ('super_admin','admin'));
 
 -- Audit log: any admin can append; only super_admin can read; immutable
 create policy "audit_insert" on audit_log for insert with check ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
@@ -262,3 +271,27 @@ create policy "tenant_own_issues_read"   on issue_reports for select using (tena
 -- bucket: room-photos  (public)
 -- bucket: receipts     (private, tenant-scoped)
 -- =============================================================
+
+-- Storage policies for room-photos: public read, admin write.
+-- Uploading/deleting goes through RLS on storage.objects even for a
+-- public bucket — public only grants read.
+drop policy if exists "room_photos_public_read"   on storage.objects;
+drop policy if exists "room_photos_admin_insert"  on storage.objects;
+drop policy if exists "room_photos_admin_delete"  on storage.objects;
+drop policy if exists "room_photos_admin_update"  on storage.objects;
+
+create policy "room_photos_public_read"
+  on storage.objects for select
+  using ( bucket_id = 'room-photos' );
+
+create policy "room_photos_admin_insert"
+  on storage.objects for insert to authenticated
+  with check ( bucket_id = 'room-photos' and public.current_user_role() in ('super_admin','admin') );
+
+create policy "room_photos_admin_delete"
+  on storage.objects for delete to authenticated
+  using ( bucket_id = 'room-photos' and public.current_user_role() in ('super_admin','admin') );
+
+create policy "room_photos_admin_update"
+  on storage.objects for update to authenticated
+  using ( bucket_id = 'room-photos' and public.current_user_role() in ('super_admin','admin') );
