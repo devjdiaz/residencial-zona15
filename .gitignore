@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# obsidian — solo versionamos las notas .md del knowledge-vault, no la config
+knowledge-vault/.obsidian/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
