@@ -54,7 +54,7 @@ export default function ReportsManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 w-fit max-w-full overflow-x-auto">
         {FILTERS.map((f) => {
           const count = f.key === "all" ? reports.length : reports.filter((r) => r.status === f.key).length
           return (
@@ -88,7 +88,7 @@ export default function ReportsManager() {
                 </span>
               </div>
               <p className="text-sm text-gray-700">{r.description}</p>
-              <div className="flex items-center justify-between mt-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
                 <span className="text-xs text-gray-400">
                   {new Date(r.created_at).toLocaleString("es-GT", { dateStyle: "short", timeStyle: "short" })}
                 </span>

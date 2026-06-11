@@ -305,15 +305,15 @@ export default function TenantDashboard() {
                 <span className="text-sm text-gray-500">Renta mensual</span>
                 <span className="text-sm font-medium text-gray-900">Q{info.price.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Contrato</span>
-                <span className="text-sm text-gray-700">
+              <div className="flex justify-between gap-3">
+                <span className="text-sm text-gray-500 flex-shrink-0">Contrato</span>
+                <span className="text-sm text-gray-700 text-right">
                   {new Date(info.startDate).toLocaleDateString("es-GT")} – {new Date(info.endDate).toLocaleDateString("es-GT")}
                 </span>
               </div>
-              <div className={`flex justify-between pt-1 border-t border-gray-50 ${daysUntilPayment !== null && daysUntilPayment <= 3 ? "text-amber-600" : ""}`}>
-                <span className="text-sm">Próximo pago</span>
-                <span className="text-sm font-semibold">
+              <div className={`flex justify-between gap-3 pt-1 border-t border-gray-50 ${daysUntilPayment !== null && daysUntilPayment <= 3 ? "text-amber-600" : ""}`}>
+                <span className="text-sm flex-shrink-0">Próximo pago</span>
+                <span className="text-sm font-semibold text-right">
                   Día {info.paymentDay}
                   {daysUntilPayment !== null && (
                     <span className="ml-1 text-xs font-normal">
@@ -477,7 +477,7 @@ export default function TenantDashboard() {
               {issues.map((it) => (
                 <div key={it.id} className="py-2.5">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm text-gray-700 flex-1">{it.description}</p>
+                    <p className="text-sm text-gray-700 flex-1 min-w-0 break-words">{it.description}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full border flex-shrink-0 ${
                       it.status === "resolved" ? "bg-green-50 text-green-700 border-green-200"
                       : it.status === "in_progress" ? "bg-blue-50 text-blue-700 border-blue-200"
