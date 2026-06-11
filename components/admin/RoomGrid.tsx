@@ -175,6 +175,7 @@ function RoomCard({
           contract={contract}
           roomIdentifier={room.identifier}
           onClose={() => setShowContractInfo(false)}
+          onUpdated={onContractCreated}
         />
       )}
       {showContract && (
