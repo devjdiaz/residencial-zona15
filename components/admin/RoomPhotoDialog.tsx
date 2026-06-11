@@ -119,7 +119,7 @@ export default function RoomPhotoDialog({ roomId, roomIdentifier, onClose }: Pro
               Sin fotos — agrega algunas para mostrarlas en el sitio público.
             </p>
           ) : (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {photos.map((p, i) => (
                 <div
                   key={p.id}

@@ -258,7 +258,7 @@ export default function FinancesPanel() {
             ].map((k) => (
               <div key={k.label} className="bg-white rounded-xl border border-gray-100 p-4">
                 <p className="text-xs text-gray-500">{k.label}</p>
-                <p className={`text-2xl font-semibold mt-1 ${k.color}`}>Q{k.value.toLocaleString()}</p>
+                <p className={`text-xl sm:text-2xl font-semibold mt-1 ${k.color}`}>Q{k.value.toLocaleString()}</p>
               </div>
             ))}
           </div>
@@ -267,7 +267,8 @@ export default function FinancesPanel() {
           {recurringCharges.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h3 className="font-medium text-gray-900 text-sm mb-3">Cargos recurrentes (mensuales)</h3>
-              <table className="w-full text-sm">
+              {/* Tabla — sm+ */}
+              <table className="hidden sm:table w-full text-sm">
                 <thead>
                   <tr className="text-xs text-gray-500 border-b border-gray-100">
                     <th className="text-left pb-2 font-medium">Concepto</th>
@@ -288,6 +289,21 @@ export default function FinancesPanel() {
                   })}
                 </tbody>
               </table>
+              {/* Filas apiladas — móvil */}
+              <div className="sm:hidden divide-y divide-gray-50">
+                {recurringCharges.map((rc) => {
+                  const c = contracts.find((c) => c.room_id === rc.room_id)
+                  return (
+                    <div key={rc.id} className="py-2 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-700">{INCOME_LABELS[rc.type] ?? rc.type}</p>
+                        <p className="text-xs text-gray-400">Hab. {c?.room?.identifier ?? "—"}</p>
+                      </div>
+                      <span className="text-sm text-gray-900 font-medium flex-shrink-0">Q{rc.amount.toLocaleString()}/mes</span>
+                    </div>
+                  )
+                })}
+              </div>
               <p className="text-xs text-gray-400 mt-2">Se suman a los ingresos fijos cada mes mientras el contrato esté activo.</p>
             </div>
           )}
@@ -304,7 +320,7 @@ export default function FinancesPanel() {
 
             {addIncome && (
               <div className="mb-4 p-4 bg-gray-50 rounded-xl space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-gray-500 mb-1 block">Habitación</label>
                     <select value={newIncome.contractId} onChange={(e) => setNewIncome((p) => ({ ...p, contractId: e.target.value }))}
@@ -376,7 +392,7 @@ export default function FinancesPanel() {
 
             {addExpense && (
               <div className="mb-4 p-4 bg-gray-50 rounded-xl space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-gray-500 mb-1 block">Categoría</label>
                     <select value={newExpense.category} onChange={(e) => setNewExpense((p) => ({ ...p, category: e.target.value }))}
@@ -432,7 +448,7 @@ export default function FinancesPanel() {
             ) : (
               <div className="divide-y divide-gray-50">
                 {receipts.map((r) => (
-                  <div key={r.receipt.id} className="py-3 flex items-start justify-between gap-4">
+                  <div key={r.receipt.id} className="py-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
                     <div className="min-w-0">
                       <div>
                         <span className="text-sm font-medium text-gray-800">{r.tenant.name}</span>

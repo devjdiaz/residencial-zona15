@@ -17,7 +17,7 @@ export default function RoomsView({ properties }: { properties: Property[] }) {
   return (
     <>
       {/* Property tabs — client toggle, no reload */}
-      <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 w-fit mb-6">
+      <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 w-fit max-w-full overflow-x-auto mb-6">
         {properties.map((p) => (
           <button
             key={p.id}
