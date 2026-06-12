@@ -27,8 +27,8 @@ Webapp de **gestión de residencias de alquiler** para un cliente en Zona 15, Ci
 - [[modelo-datos]] — tablas, RLS, función `current_user_role()`, buckets de storage.
 - [[runbook]] — correr local, env vars, deploy, cómo aplicar SQL en producción sin romper nada.
 - [[constraints-produccion]] — reglas innegociables al tocar producción.
-- **Decisiones:** [[roles-en-user-metadata]] · [[2026-06-08-rls-fotos-storage]]
-- **Bitácora de sesiones:** [[2026-06-08]]
+- **Decisiones:** [[roles-en-user-metadata]] · [[2026-06-08-rls-fotos-storage]] · [[editar-contrato-cobros]] · [[email-inquilino-y-contrato-firmado]]
+- **Bitácora de sesiones:** [[2026-06-08]] · [[2026-06-10]] · [[2026-06-12]]
 
 ## Enlaces externos
 - Repo: `github.com/devjdiaz/residencial-zona15`

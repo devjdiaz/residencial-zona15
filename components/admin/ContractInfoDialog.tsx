@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react"
 import type { Contract, TenantProfile } from "@/lib/supabase/types"
 import { logAudit } from "@/lib/audit"
+import { waLink, tenantPortalUrl } from "@/lib/whatsapp"
 
 interface Props {
   contract: Contract & { tenant_profile?: TenantProfile }
@@ -51,6 +52,9 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
   const [newPassword, setNewPassword] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [signedAt, setSignedAt] = useState<string | null>(contract.signed_at ?? null)
+  const [togglingSigned, setTogglingSigned] = useState(false)
+  const [sendingCreds, setSendingCreds] = useState(false)
 
   // ── Edit mode ──────────────────────────────────────────────
   const [editing, setEditing] = useState(false)
@@ -59,6 +63,7 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
 
   const [name, setName] = useState(tenant?.name ?? "")
   const [phone, setPhone] = useState(tenant?.phone ?? "")
+  const [email, setEmail] = useState(tenant?.email ?? "")
   const [startDate, setStartDate] = useState(contract.start_date)
   const [durationMonths, setDurationMonths] = useState(contract.duration_months)
   const [paymentDay, setPaymentDay] = useState(contract.payment_day)
@@ -123,10 +128,53 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
 
   function copyCredentials() {
     if (!tenant) return
-    const text = `Portal de pagos: https://residencial-zona15.vercel.app/tenant/login\nUsuario: ${tenant.name ? `(preguntar al admin)` : ""}\nContraseña: ${newPassword ?? "(sin cambios)"}`
+    const text = `Portal de pagos: ${tenantPortalUrl()}\nUsuario: ${tenant.email || "(sin email registrado)"}\nContraseña: ${newPassword ?? "(sin cambios)"}`
     navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function toggleSigned() {
+    setTogglingSigned(true)
+    const next = signedAt ? null : new Date().toISOString()
+    try {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: signedErr } = await (supabase as any).from("contracts").update({ signed_at: next }).eq("id", contract.id)
+      if (signedErr) throw signedErr
+      setSignedAt(next)
+      logAudit(`${next ? "Marcó" : "Desmarcó"} contrato firmado — Hab. ${roomIdentifier}${tenant?.name ? ` (${tenant.name})` : ""}`, "contract", roomIdentifier)
+      onUpdated()
+    } catch {
+      alert("Error al actualizar el estado de firma")
+    } finally {
+      setTogglingSigned(false)
+    }
+  }
+
+  // Genera contraseña nueva (la actual no es recuperable) y abre WhatsApp con las credenciales
+  async function sendCredentialsWhatsApp() {
+    if (!tenant) return
+    setSendingCreds(true)
+    const pwd = generatePassword()
+    try {
+      const res = await fetch("/api/admin/reset-tenant-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantId: contract.tenant_profile_id, password: pwd }),
+      })
+      if (!res.ok) throw new Error("Error al generar la contraseña")
+      setNewPassword(pwd)
+      const msg = `Hola ${tenant.name}, tu contrato quedó registrado. 🏠\nEntra al portal de inquilinos para subir tus comprobantes de pago cada mes:\n${tenantPortalUrl()}\nUsuario: ${tenant.email}\nContraseña: ${pwd}`
+      const link = waLink(tenant.phone, msg)
+      if (link) window.open(link, "_blank")
+      logAudit(`Envió credenciales por WhatsApp — Hab. ${roomIdentifier} (${tenant.name})`, "tenant", roomIdentifier)
+    } catch {
+      alert("Error al enviar las credenciales")
+    } finally {
+      setSendingCreds(false)
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -140,10 +188,24 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
     const endDate = end.toISOString().split("T")[0]
 
     try {
+      // 0. Email: actualiza la credencial de login en auth.users (y sincroniza el perfil).
+      //    Va primero: si falla (email duplicado/inválido) se aborta sin guardar nada más.
+      const emailChanged = email.trim() !== (tenant?.email ?? "")
+      if (emailChanged) {
+        const res = await fetch("/api/admin/update-tenant-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tenantId: contract.tenant_profile_id, email: email.trim() }),
+        })
+        const resData = await res.json()
+        if (!res.ok) throw new Error(resData.error ?? "No se pudo actualizar el email")
+        logAudit(`Cambió email de inquilino — Hab. ${roomIdentifier} (${name})`, "tenant", roomIdentifier)
+      }
+
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
 
-      // 1. Datos del inquilino
+      // 1. Datos del inquilino (el email ya lo sincronizó la API)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: profileErr } = await (supabase as any).from("tenant_profiles").update({ name, phone }).eq("id", contract.tenant_profile_id)
       if (profileErr) throw profileErr
@@ -232,6 +294,11 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Nombre del inquilino</label>
                 <input required value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Nombre completo" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Correo electrónico</label>
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="inquilino@gmail.com" />
+                <p className="text-xs text-gray-400 mt-1">Si lo cambias, el nuevo correo será su usuario para entrar al portal.</p>
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">WhatsApp / Teléfono</label>
@@ -372,6 +439,10 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
                 <span className="text-gray-500">Nombre</span>
                 <span className="font-medium text-gray-900">{tenant?.name ?? "—"}</span>
               </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-500">Email</span>
+                <span className="font-medium text-gray-900 break-all text-right">{tenant?.email || "—"}</span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Teléfono</span>
                 <span className="font-medium text-gray-900">{tenant?.phone ?? "—"}</span>
@@ -396,6 +467,49 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
                 <span className="text-gray-500">Día de pago</span>
                 <span className="font-medium text-gray-900">Día {contract.payment_day}</span>
               </div>
+            </div>
+
+            {/* Contrato firmado + envío de credenciales */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 text-sm">
+              <button
+                onClick={toggleSigned}
+                disabled={togglingSigned}
+                className="flex items-center gap-2 w-full text-left disabled:opacity-60"
+              >
+                <span className={`w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                  signedAt ? "bg-green-600 border-green-600" : "bg-white border-gray-300"
+                }`}>
+                  {signedAt && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  )}
+                </span>
+                <span className="text-gray-700 flex-1">
+                  Contrato firmado recibido
+                  {signedAt && (
+                    <span className="block text-[11px] text-gray-400">
+                      recibido el {new Date(signedAt).toLocaleDateString("es-GT")}
+                    </span>
+                  )}
+                </span>
+              </button>
+              {signedAt && (
+                <div>
+                  <button
+                    onClick={sendCredentialsWhatsApp}
+                    disabled={sendingCreds || !tenant || !tenant.phone.replace(/\D/g, "")}
+                    className="w-full py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendingCreds ? "Generando…" : "📲 Enviar credenciales por WhatsApp"}
+                  </button>
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    {tenant?.phone.replace(/\D/g, "")
+                      ? "Genera una contraseña nueva y abre WhatsApp con los datos de acceso al portal."
+                      : "El inquilino no tiene teléfono — usa \"Generar nueva contraseña\" y copia las credenciales."}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Reset password */}

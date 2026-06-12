@@ -6,7 +6,7 @@ import { logAudit } from "@/lib/audit"
 interface Props {
   room: Room & { room_type?: { label: string; price: number } }
   onClose: () => void
-  onCreated: (credentials: { email: string; password: string }) => void
+  onCreated: (credentials: { email: string; password: string; name: string; phone: string }) => void
 }
 
 function generatePassword(length = 12) {
@@ -82,6 +82,7 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
         contract_id: null,
         name,
         phone,
+        email,
       })
       if (profileErr) throw profileErr
 
@@ -134,7 +135,7 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
       await (supabase as any).from("rooms").update({ status: "occupied" }).eq("id", room.id)
 
       logAudit(`Creó contrato — Hab. ${room.identifier} (${name})`, "contract", room.identifier)
-      onCreated({ email, password })
+      onCreated({ email, password, name, phone })
     } catch (err: unknown) {
       const msg = err instanceof Error
         ? err.message
