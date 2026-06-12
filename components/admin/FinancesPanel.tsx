@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
-import type { Contract, Expense, IncomeExtra, PaymentReceipt, TenantProfile } from "@/lib/supabase/types"
+import type { Contract, Expense, IncomeExtra, TenantProfile } from "@/lib/supabase/types"
 import { logAudit } from "@/lib/audit"
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
@@ -29,13 +29,6 @@ interface Summary {
   commissions: number
 }
 
-interface Receipt {
-  receipt: PaymentReceipt
-  tenant: TenantProfile
-  roomId: string
-  roomIdentifier: string
-}
-
 export default function FinancesPanel() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -43,7 +36,6 @@ export default function FinancesPanel() {
   const [propertyId, setPropertyId] = useState<string>("")
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
-  const [receipts, setReceipts] = useState<Receipt[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [incomeExtras, setIncomeExtras] = useState<IncomeExtra[]>([])
   const [recurringCharges, setRecurringCharges] = useState<{ id: string; type: string; amount: number; room_id: string }[]>([])
@@ -124,24 +116,6 @@ export default function FinancesPanel() {
       const commissions = (exp ?? []).filter((e) => e.category === "commission").reduce((sum, e) => sum + e.amount, 0)
 
       setSummary({ fixedIncome, recurringIncome, variableIncome, fixedExpenses, variableExpenses, commissions })
-
-      // Payment receipts
-      const contractIds = (contracts ?? []).map((c) => c.id)
-      const { data: rec } = await supabase
-        .from("payment_receipts")
-        .select("*")
-        .in("contract_id", contractIds)
-        .eq("period_month", period)
-      const receiptList: Receipt[] = (rec ?? []).map((r) => {
-        const contract = (contracts ?? []).find((c) => c.id === r.contract_id)
-        return {
-          receipt: r,
-          tenant: contract?.tenant_profile ?? { id: "", room_id: "", contract_id: "", name: "—", phone: "", email: "" },
-          roomId: contract?.room_id ?? "",
-          roomIdentifier: contract?.room?.identifier ?? "—",
-        }
-      })
-      setReceipts(receiptList)
       setLoading(false)
     }
     load()
@@ -182,38 +156,6 @@ export default function FinancesPanel() {
     logAudit(`Agregó ingreso extra — ${INCOME_LABELS[newIncome.type] ?? newIncome.type} Q${Number(newIncome.amount).toLocaleString()} (Hab. ${contract.room?.identifier ?? ""})`, "income")
     setAddIncome(false)
     setNewIncome({ type: "additional_person", amount: "", contractId: "", notes: "" })
-  }
-
-  async function verifyReceipt(receiptId: string) {
-    const { createClient } = await import("@/lib/supabase/client")
-    const supabase = createClient()
-    await supabase.from("payment_receipts").update({ verified: true, rejected: false, rejection_reason: null }).eq("id", receiptId)
-    setReceipts((prev) => prev.map((r) => r.receipt.id === receiptId ? { ...r, receipt: { ...r.receipt, verified: true, rejected: false, rejection_reason: null } } : r))
-    const r = receipts.find((x) => x.receipt.id === receiptId)
-    logAudit(`Aceptó comprobante — Hab. ${r?.roomIdentifier ?? ""} · ${r?.receipt.period_month ?? period}`, "receipt", r?.roomIdentifier)
-  }
-
-  async function viewReceipt(storagePath: string) {
-    const { createClient } = await import("@/lib/supabase/client")
-    const supabase = createClient()
-    const { data, error } = await supabase.storage.from("receipts").createSignedUrl(storagePath, 300)
-    if (error || !data) { alert("No se pudo abrir el comprobante"); return }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer")
-  }
-
-  async function rejectReceipt(receiptId: string) {
-    const reason = window.prompt("Motivo del rechazo (opcional):", "")
-    if (reason === null) return // cancelled
-    const { createClient } = await import("@/lib/supabase/client")
-    const supabase = createClient()
-    await supabase.from("payment_receipts")
-      .update({ verified: false, rejected: true, rejection_reason: reason || null })
-      .eq("id", receiptId)
-    setReceipts((prev) => prev.map((r) => r.receipt.id === receiptId
-      ? { ...r, receipt: { ...r.receipt, verified: false, rejected: true, rejection_reason: reason || null } }
-      : r))
-    const r = receipts.find((x) => x.receipt.id === receiptId)
-    logAudit(`Rechazó comprobante — Hab. ${r?.roomIdentifier ?? ""} · ${r?.receipt.period_month ?? period}${reason ? ` (${reason})` : ""}`, "receipt", r?.roomIdentifier)
   }
 
   const totalIncome = (summary?.fixedIncome ?? 0) + (summary?.recurringIncome ?? 0) + (summary?.variableIncome ?? 0)
@@ -435,52 +377,6 @@ export default function FinancesPanel() {
             </table>
           </div>
 
-          {/* Receipts */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
-            <h3 className="font-medium text-gray-900 text-sm mb-4">
-              Comprobantes de pago — {MONTHS[month]} {year}
-              <span className="ml-2 text-xs text-gray-400">
-                ({receipts.filter((r) => r.receipt.verified).length}/{receipts.length} verificados)
-              </span>
-            </h3>
-            {receipts.length === 0 ? (
-              <p className="text-xs text-gray-400 py-4 text-center">Sin comprobantes subidos este mes</p>
-            ) : (
-              <div className="divide-y divide-gray-50">
-                {receipts.map((r) => (
-                  <div key={r.receipt.id} className="py-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
-                    <div className="min-w-0">
-                      <div>
-                        <span className="text-sm font-medium text-gray-800">{r.tenant.name}</span>
-                        <span className="text-xs text-gray-400 ml-2">Hab. {r.roomIdentifier}</span>
-                      </div>
-                      {r.receipt.rejected && r.receipt.rejection_reason && (
-                        <p className="text-xs text-red-500 mt-0.5">Motivo: {r.receipt.rejection_reason}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button onClick={() => viewReceipt(r.receipt.storage_path)}
-                        className="text-xs text-[#24577a] hover:underline">Ver</button>
-                      {r.receipt.verified ? (
-                        <span className="text-xs text-green-600 font-medium">✓ Verificado</span>
-                      ) : (
-                        <>
-                          <button onClick={() => verifyReceipt(r.receipt.id)}
-                            className="text-xs px-2 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100 transition-colors border border-green-200">
-                            Aceptar
-                          </button>
-                          <button onClick={() => rejectReceipt(r.receipt.id)}
-                            className={`text-xs px-2 py-1 rounded transition-colors border ${r.receipt.rejected ? "bg-red-100 text-red-700 border-red-300" : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"}`}>
-                            {r.receipt.rejected ? "Rechazado" : "Rechazar"}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </>
       )}
     </div>

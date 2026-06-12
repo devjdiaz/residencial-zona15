@@ -57,6 +57,7 @@ export interface Contract {
   status: ContractStatus
   signed_at: string | null
   notes: string | null
+  contract_file_path: string | null
   room?: Room
   tenant_profile?: TenantProfile
 }
@@ -165,7 +166,7 @@ export interface Database {
       }
       contracts: {
         Row: Contract
-        Insert: Omit<Contract, "id" | "room" | "tenant_profile" | "signed_at"> & { id?: string; signed_at?: string | null }
+        Insert: Omit<Contract, "id" | "room" | "tenant_profile" | "signed_at" | "contract_file_path"> & { id?: string; signed_at?: string | null; contract_file_path?: string | null }
         Update: Partial<Omit<Contract, "room" | "tenant_profile">>
       }
       tenant_profiles: {

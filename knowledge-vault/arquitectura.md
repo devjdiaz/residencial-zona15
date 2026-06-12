@@ -28,8 +28,11 @@ Verificación en dos capas:
 
 ## Rutas
 - **Sitio público** — disponibilidad de cuartos.
-- **`/admin/*`** (super_admin, admin): `login`, `rooms`, `bitacora`, `personal`, `reportes`.
+- **`/admin/*`** (super_admin, admin): `login`, `rooms`, `finances`, `reportes`, `historial`, `bitacora`, `personal`.
 - **`/tenant/*`** (tenant): `login`, `dashboard`.
+
+> [!info] Historial
+> `/admin/historial` agrupa por habitación: archivo del contrato firmado, comprobantes mes a mes (la verificación Aceptar/Rechazar vive AQUÍ, ya no en Finanzas) y reportes filtrados por habitación. Ver [[2026-06-12-historial-y-archivo-contrato]].
 
 ## API routes (`app/api/admin/`)
 Server-side, usan el **service role** (`createServiceClient`) para operaciones privilegiadas:
@@ -43,4 +46,4 @@ Server-side, usan el **service role** (`createServiceClient`) para operaciones p
 - `lib/audit.ts` — `logAudit()` escribe en `audit_log` (append-only). Falla en silencio, nunca rompe la acción principal.
 
 ## Componentes admin clave (`components/admin/`)
-`RoomGrid` · `RoomsView` · `RoomPhotoDialog` (sube/borra fotos a storage) · `ContractDialog` · `FinancesPanel` · `ReportsManager` · `StaffManager` · `AccountDialog` · `AdminHeader`.
+`RoomGrid` · `RoomsView` · `RoomPhotoDialog` (sube/borra fotos a storage) · `ContractDialog` · `FinancesPanel` · `ReportsManager` (acepta `roomId` opcional) · `HistorialView` · `ReceiptsDialog` (verificación de comprobantes) · `ContractFileManager` (archivo del contrato, compartido entre Historial y "Ver contrato") · `StaffManager` · `AccountDialog` · `AdminHeader`.

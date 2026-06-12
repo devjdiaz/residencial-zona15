@@ -19,7 +19,7 @@ Volver a [[00-Indice]]. Fuente: `supabase/schema.sql` + migraciones en `supabase
 | `rooms` | cuartos por propiedad, estado | lectura pública + admin todo |
 | `room_photos` | fotos de cuartos (path en storage) | lectura pública + admin escribe |
 | `tenant_profiles` | perfil inquilino (FK a `auth.users`); `email` es **copia** del de `auth.users` para mostrarlo en backoffice | dueño lee + admin todo |
-| `contracts` | contrato: fechas, día de pago, estado, `signed_at` (contrato firmado recibido) | dueño lee + admin todo |
+| `contracts` | contrato: fechas, día de pago, estado, `signed_at` (contrato firmado recibido), `contract_file_path` (archivo firmado en bucket `contracts`) | dueño lee + admin todo |
 | `payment_receipts` | recibos mensuales, hash, rechazo, verificación | dueño CRUD propio + admin todo |
 | `expenses` | gastos por propiedad/compartidos | admin todo |
 | `income_extras` | cargos únicos (depósito, firma, persona extra, parqueo) | admin todo + dueño lee |
@@ -47,6 +47,7 @@ Usada por las policies del bucket `room-photos`. El porqué: [[2026-06-08-rls-fo
 
 ## Migraciones (`supabase/migrations/`)
 - `2026-06-12_email-signed-template.sql` — `tenant_profiles.email` (con backfill desde `auth.users`), `contracts.signed_at`, bucket `contract-templates` + policies. Idempotente. Ver [[email-inquilino-y-contrato-firmado]].
+- `2026-06-12_historial-contract-file.sql` — `contracts.contract_file_path`, bucket privado `contracts` + policies solo-admin. Idempotente. Ver [[2026-06-12-historial-y-archivo-contrato]].
 
 > [!info] Sincronización del email
 > La fuente de verdad del email sigue siendo `auth.users` (credencial de login). `tenant_profiles.email` es una copia para la UI. La **única** vía de escritura es `/api/admin/update-tenant-email` (actualiza ambos con service client). Si se desincroniza, re-ejecutar el backfill de la migración.
@@ -55,6 +56,7 @@ Usada por las policies del bucket `room-photos`. El porqué: [[2026-06-08-rls-fo
 - **`room-photos`** — público para lectura; escritura (insert/delete/update) solo admin vía `current_user_role()`. Path: `rooms/{roomId}/{timestamp}-{filename}`.
 - **`receipts`** — privado, scoped por tenant. Path: `{user.id}/{periodo}/{filename}`.
 - **`contract-templates`** — público para lectura (el inquilino descarga la plantilla desde el link de WhatsApp sin sesión); escritura solo admin vía `current_user_role()`. Un solo archivo en la raíz (la plantilla vigente); al reemplazar se borra el anterior.
+- **`contracts`** — privado, solo admin (lectura y escritura vía `current_user_role()`). Contratos firmados escaneados. Path: `{contract_id}/{filename}`; lectura por signed URL (300s); al reemplazar con otro nombre se borra el anterior.
 
 > [!warning] Bucket público ≠ escritura pública
 > "Público" solo da lectura. Subir/borrar pasa igual por RLS de `storage.objects`. Faltaban esas policies → causó el bug de fotos.

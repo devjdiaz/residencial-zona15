@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import type { Contract, TenantProfile } from "@/lib/supabase/types"
 import { logAudit } from "@/lib/audit"
 import { waLink, tenantPortalUrl } from "@/lib/whatsapp"
+import ContractFileManager from "./ContractFileManager"
 
 interface Props {
   contract: Contract & { tenant_profile?: TenantProfile }
@@ -511,6 +512,14 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
                 </div>
               )}
             </div>
+
+            {/* Archivo del contrato firmado (bucket 'contracts') */}
+            <ContractFileManager
+              contractId={contract.id}
+              roomIdentifier={roomIdentifier}
+              filePath={contract.contract_file_path ?? null}
+              onUpdated={onUpdated}
+            />
 
             {/* Reset password */}
             {newPassword ? (
