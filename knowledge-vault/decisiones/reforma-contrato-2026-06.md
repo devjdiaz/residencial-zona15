@@ -33,4 +33,4 @@ Mismo patrón, ahora para el checkbox existente "Parqueo (mensual)": al marcarlo
 - Misma sección condicional en el PDF: "VEHÍCULO AUTORIZADO (PARQUEO)", justo después de "PERSONA ADICIONAL AUTORIZADA".
 - Estado: código completo, `tsc --noEmit`/`eslint` limpios, migración aplicada en producción por el usuario. PDF de ejemplo regenerado tras aplicar y confirma 200 OK (este contrato de prueba no tiene parqueo, así que la sección no aparece — falta probar en el navegador el caso con parqueo activo).
 
-Rama: `feature/historial-module`. Sin commit todavía — pendiente de autorización del usuario.
+Rama: `feature/historial-module`, commit `6998bd1`. **PR #9 mergeado a `main`** el 2026-06-16 (merge commit `ab3ba43`). Usuario confirmó probando en el navegador: "todo quedó excelente".
