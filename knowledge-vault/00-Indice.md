@@ -27,7 +27,7 @@ Webapp de **gestión de residencias de alquiler** para un cliente en Zona 15, Ci
 - [[modelo-datos]] — tablas, RLS, función `current_user_role()`, buckets de storage.
 - [[runbook]] — correr local, env vars, deploy, cómo aplicar SQL en producción sin romper nada.
 - [[constraints-produccion]] — reglas innegociables al tocar producción.
-- **Decisiones:** [[roles-en-user-metadata]] · [[2026-06-08-rls-fotos-storage]] · [[editar-contrato-cobros]] · [[email-inquilino-y-contrato-firmado]] · [[2026-06-12-historial-y-archivo-contrato]] · [[renta-por-contrato]] · [[reforma-contrato-2026-06]] · [[rol-guardian]]
+- **Decisiones:** [[roles-en-user-metadata]] · [[2026-06-08-rls-fotos-storage]] · [[editar-contrato-cobros]] · [[email-inquilino-y-contrato-firmado]] · [[2026-06-12-historial-y-archivo-contrato]] · [[renta-por-contrato]] · [[reforma-contrato-2026-06]] · [[rol-guardian]] · [[busqueda-admin]]
 - **Bitácora de sesiones:** [[2026-06-08]] · [[2026-06-10]] · [[2026-06-12]] · [[2026-06-13]] · [[2026-06-15]] · [[2026-06-16]]
 
 ## Enlaces externos

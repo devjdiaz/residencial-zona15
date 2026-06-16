@@ -29,7 +29,7 @@ Verificación en dos capas:
 
 ## Rutas
 - **Sitio público** — disponibilidad de cuartos.
-- **`/admin/*`** (super_admin, admin): `login`, `rooms`, `finances`, `reportes`, `historial`, `bitacora`, `personal`.
+- **`/admin/*`** (super_admin, admin): `login`, `rooms`, `finances`, `reportes`, `historial`, `bitacora`, `personal`, `buscar`.
 - **`/tenant/*`** (tenant): `login`, `dashboard`.
 - **`/guardian/*`** (guardian): `login`, `dashboard` (reutiliza `ReportsManager` sin nav adicional).
 
@@ -48,4 +48,4 @@ Server-side, usan el **service role** (`createServiceClient`) para operaciones p
 - `lib/audit.ts` — `logAudit()` escribe en `audit_log` (append-only). Falla en silencio, nunca rompe la acción principal.
 
 ## Componentes admin clave (`components/admin/`)
-`RoomGrid` · `RoomsView` · `RoomPhotoDialog` (sube/borra fotos a storage) · `ContractDialog` · `FinancesPanel` · `ReportsManager` (acepta `roomId` opcional) · `HistorialView` · `ReceiptsDialog` (verificación de comprobantes) · `ContractFileManager` (archivo del contrato, compartido entre Historial y "Ver contrato") · `StaffManager` · `AccountDialog` · `AdminHeader`.
+`RoomGrid` · `RoomsView` · `RoomPhotoDialog` (sube/borra fotos a storage) · `ContractDialog` · `ContractInfoDialog` (ver/editar contrato; reutilizado también por `SearchView`) · `FinancesPanel` · `ReportsManager` (acepta `roomId` opcional) · `HistorialView` · `ReceiptsDialog` (verificación de comprobantes) · `ContractFileManager` (archivo del contrato, compartido entre Historial y "Ver contrato") · `StaffManager` · `SearchView` (búsqueda global de contratos por cualquier dato; ver [[busqueda-admin]]) · `AccountDialog` · `AdminHeader`.
