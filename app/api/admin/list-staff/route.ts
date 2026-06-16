@@ -13,7 +13,7 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const staff = data.users
-    .filter((u) => ["super_admin", "admin"].includes(u.user_metadata?.role))
+    .filter((u) => ["super_admin", "admin", "guardian"].includes(u.user_metadata?.role))
     .map((u) => ({
       id: u.id,
       email: u.email,

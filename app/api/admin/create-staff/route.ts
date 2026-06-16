@@ -8,14 +8,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { email, password } = await req.json()
+  const { email, password, role = "admin" } = await req.json()
   if (!email || !password) return NextResponse.json({ error: "email y password requeridos" }, { status: 400 })
+  if (role !== "admin" && role !== "guardian") {
+    return NextResponse.json({ error: "Rol inválido" }, { status: 400 })
+  }
 
   const service = await createServiceClient()
   const { data, error } = await service.auth.admin.createUser({
     email,
     password,
-    user_metadata: { role: "admin" },
+    user_metadata: { role },
     email_confirm: true,
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

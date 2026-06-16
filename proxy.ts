@@ -42,9 +42,16 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Guardian routes — require guardian role
+  if (pathname.startsWith("/guardian") && !pathname.startsWith("/guardian/login")) {
+    if (!user || user.user_metadata?.role !== "guardian") {
+      return NextResponse.redirect(new URL("/guardian/login", request.url))
+    }
+  }
+
   return response
 }
 
 export const proxyConfig = {
-  matcher: ["/admin/:path*", "/tenant/:path*"],
+  matcher: ["/admin/:path*", "/tenant/:path*", "/guardian/:path*"],
 }

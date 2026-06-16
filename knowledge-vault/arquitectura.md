@@ -14,29 +14,31 @@ Volver a [[00-Indice]].
 - **Vercel** — deploy (`vercel.json`).
 
 ## Roles
-Guardados en `auth.users.user_metadata.role`. Tres valores:
+Guardados en `auth.users.user_metadata.role`. Cuatro valores:
 
 | Rol | Acceso |
 |-----|--------|
-| `super_admin` | Todo + gestiona personal (admins) + lee bitácora |
+| `super_admin` | Todo + gestiona personal (admins, guardianes) + lee bitácora |
 | `admin` | Gestión operativa (cuartos, contratos, recibos, inquilinos) |
 | `tenant` | Su propio perfil, contrato, recibos, reportar daños |
+| `guardian` | Solo lee y actualiza `issue_reports` (módulo Reportes) — sin acceso a finanzas, contratos ni cuartos. Ver [[rol-guardian]]. |
 
 Verificación en dos capas:
-- **Middleware** `proxy.ts` → `supabase.auth.getUser()` (fresco, vía API). Protege `/admin/*` y `/tenant/*`.
+- **Middleware** `proxy.ts` → `supabase.auth.getUser()` (fresco, vía API). Protege `/admin/*`, `/tenant/*` y `/guardian/*`.
 - **RLS** en Postgres → ver [[modelo-datos]]. Para fotos usa `current_user_role()`; ver [[2026-06-08-rls-fotos-storage]] del por qué.
 
 ## Rutas
 - **Sitio público** — disponibilidad de cuartos.
 - **`/admin/*`** (super_admin, admin): `login`, `rooms`, `finances`, `reportes`, `historial`, `bitacora`, `personal`.
 - **`/tenant/*`** (tenant): `login`, `dashboard`.
+- **`/guardian/*`** (guardian): `login`, `dashboard` (reutiliza `ReportsManager` sin nav adicional).
 
 > [!info] Historial
 > `/admin/historial` agrupa por habitación: archivo del contrato firmado, comprobantes mes a mes (la verificación Aceptar/Rechazar vive AQUÍ, ya no en Finanzas) y reportes filtrados por habitación. Ver [[2026-06-12-historial-y-archivo-contrato]].
 
 ## API routes (`app/api/admin/`)
 Server-side, usan el **service role** (`createServiceClient`) para operaciones privilegiadas:
-- `create-staff` / `delete-staff` / `list-staff` — gestión de admins (solo super_admin).
+- `create-staff` / `delete-staff` / `list-staff` — gestión de admins y guardianes (solo super_admin). `create-staff` recibe `role: "admin" | "guardian"`.
 - `create-tenant` / `delete-tenant` / `reset-tenant-password` — gestión de inquilinos.
 
 ## Clientes Supabase (`lib/supabase/`)
