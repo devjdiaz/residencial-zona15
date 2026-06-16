@@ -114,6 +114,7 @@ create table contracts (
   whatsapp_template  text,
   status             text not null default 'active' check (status in ('active','ended')),
   signed_at          timestamptz,  -- contrato firmado recibido (null = aún no)
+  monthly_rent       numeric(10,2),  -- renta negociada; null = precio de lista del tipo
   notes              text,
   contract_file_path text   -- archivo firmado en bucket 'contracts'
 );

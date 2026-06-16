@@ -84,7 +84,7 @@ export default function FinancesPanel() {
 
       setContracts(contracts ?? [])
       const activeContractIds = (contracts ?? []).map((c) => c.id)
-      const fixedIncome = (contracts ?? []).reduce((sum, c) => sum + (c.room?.room_type?.price ?? 0), 0)
+      const fixedIncome = (contracts ?? []).reduce((sum, c) => sum + (c.monthly_rent ?? c.room?.room_type?.price ?? 0), 0)
 
       // Recurring charges (monthly) for active contracts
       const { data: recurring } = await supabase

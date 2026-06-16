@@ -45,7 +45,7 @@ function RoomCard({
   const [showCredentials, setShowCredentials] = useState(false)
   const [showPhotos, setShowPhotos] = useState(false)
   const [photoCount, setPhotoCount] = useState(room.room_photos?.length ?? 0)
-  const [newCredentials, setNewCredentials] = useState<{ email: string; password: string; name: string; phone: string } | null>(null)
+  const [newCredentials, setNewCredentials] = useState<{ email: string; password: string; name: string; phone: string; contractId: string } | null>(null)
 
   const payDays = contract ? daysUntilPayment(contract.payment_day) : null
   const paymentDue = payDays !== null && payDays <= 3
@@ -174,6 +174,7 @@ function RoomCard({
         <ContractInfoDialog
           contract={contract}
           roomIdentifier={room.identifier}
+          listPrice={room.room_type?.price ?? null}
           onClose={() => setShowContractInfo(false)}
           onUpdated={onContractCreated}
         />

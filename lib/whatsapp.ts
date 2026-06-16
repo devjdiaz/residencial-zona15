@@ -10,6 +10,10 @@ export function tenantPortalUrl(): string {
   return `${window.location.origin}/tenant/login`
 }
 
+export function getContractPdfUrl(contractId: string): string {
+  return `${window.location.origin}/api/contracts/${contractId}/pdf`
+}
+
 // El bucket guarda un único archivo (el template vigente); se descubre con list()
 // porque el nombre/extensión puede variar (pdf, docx) al reemplazarlo.
 export async function getContractTemplateUrl(): Promise<string | null> {

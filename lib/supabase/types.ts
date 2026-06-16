@@ -56,6 +56,7 @@ export interface Contract {
   whatsapp_template: string | null
   status: ContractStatus
   signed_at: string | null
+  monthly_rent: number | null
   notes: string | null
   contract_file_path: string | null
   room?: Room
@@ -166,7 +167,7 @@ export interface Database {
       }
       contracts: {
         Row: Contract
-        Insert: Omit<Contract, "id" | "room" | "tenant_profile" | "signed_at" | "contract_file_path"> & { id?: string; signed_at?: string | null; contract_file_path?: string | null }
+        Insert: Omit<Contract, "id" | "room" | "tenant_profile" | "signed_at" | "contract_file_path" | "monthly_rent"> & { id?: string; signed_at?: string | null; contract_file_path?: string | null; monthly_rent?: number | null }
         Update: Partial<Omit<Contract, "room" | "tenant_profile">>
       }
       tenant_profiles: {

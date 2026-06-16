@@ -91,7 +91,7 @@ export default function TenantDashboard() {
           identifier: (room?.identifier as string) ?? "",
           propertyName: (property?.name as string) ?? "",
           roomTypeLabel: (roomType?.label as string) ?? "",
-          price: (roomType?.price as number) ?? 0,
+          price: (contract?.monthly_rent as number) ?? (roomType?.price as number) ?? 0,
           startDate: (contract?.start_date as string) ?? "",
           endDate: (contract?.end_date as string) ?? "",
           paymentDay: (contract?.payment_day as number) ?? 1,
