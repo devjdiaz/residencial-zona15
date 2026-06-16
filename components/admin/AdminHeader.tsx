@@ -72,6 +72,7 @@ export default function AdminHeader() {
 
         {/* Nav escritorio (lg+) — sin cambios respecto al diseño actual */}
         <div className="hidden lg:flex items-center gap-1">
+          <a href="/admin/buscar" className={linkClass("/admin/buscar")}>Buscar</a>
           <a href="/admin/rooms" className={linkClass("/admin/rooms")}>Habitaciones</a>
           <a href="/admin/finances" className={linkClass("/admin/finances")}>Finanzas</a>
           <a href="/admin/reportes" className={`${linkClass("/admin/reportes")} relative`}>
@@ -121,6 +122,7 @@ export default function AdminHeader() {
       {menuOpen && (
         <div className="lg:hidden border-t border-gray-100 bg-white">
           <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-2 space-y-0.5">
+            <a href="/admin/buscar" className={mobileLinkClass("/admin/buscar")}>Buscar</a>
             <a href="/admin/rooms" className={mobileLinkClass("/admin/rooms")}>Habitaciones</a>
             <a href="/admin/finances" className={mobileLinkClass("/admin/finances")}>Finanzas</a>
             <a href="/admin/reportes" className={mobileLinkClass("/admin/reportes")}>
