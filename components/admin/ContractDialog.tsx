@@ -51,10 +51,33 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
     setExtras((p) => ({ ...p, [key]: { ...p[key], amount } }))
   }
 
+  // Datos de la persona adicional (solo si extras.additional_person.on) — sin email,
+  // nunca tiene cuenta de login; se guardan en contracts, no en tenant_profiles.
+  const [addPerson, setAddPerson] = useState({ name: "", dpi: "", phone: "", phoneAlt: "" })
+
+  // Datos del vehículo (solo si extras.parking.on) — se guardan en contracts.
+  const [vehicle, setVehicle] = useState({ type: "", brand: "", line: "", color: "", plate: "" })
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    if (extras.additional_person.on) {
+      if (!addPerson.name.trim() || !addPerson.dpi.trim() || !addPerson.phone.trim()) {
+        setError("Completa nombre, DPI y teléfono de la persona adicional, o desmarca la casilla.")
+        setLoading(false)
+        return
+      }
+    }
+
+    if (extras.parking.on) {
+      if (!vehicle.type || !vehicle.brand.trim() || !vehicle.line.trim() || !vehicle.color.trim() || !vehicle.plate.trim()) {
+        setError("Completa tipo, marca, línea, color y placa del vehículo, o desmarca la casilla de parqueo.")
+        setLoading(false)
+        return
+      }
+    }
 
     const password = generatePassword()
 
@@ -105,6 +128,17 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
           monthly_rent: monthlyRent,
           whatsapp_template: waTemplate || null,
           status: "active",
+          has_additional_person: extras.additional_person.on,
+          additional_person_name: extras.additional_person.on ? addPerson.name.trim() : "",
+          additional_person_dpi: extras.additional_person.on ? addPerson.dpi.trim() : "",
+          additional_person_phone: extras.additional_person.on ? addPerson.phone.trim() : "",
+          additional_person_phone_alt: extras.additional_person.on ? addPerson.phoneAlt.trim() : "",
+          has_parking: extras.parking.on,
+          parking_vehicle_type: extras.parking.on ? vehicle.type : "",
+          parking_vehicle_brand: extras.parking.on ? vehicle.brand.trim() : "",
+          parking_vehicle_line: extras.parking.on ? vehicle.line.trim() : "",
+          parking_vehicle_color: extras.parking.on ? vehicle.color.trim() : "",
+          parking_vehicle_plate: extras.parking.on ? vehicle.plate.trim() : "",
         })
         .select()
         .single()
@@ -287,6 +321,76 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
                 Único: se cobra una vez al iniciar. Mensual: se suma a los ingresos cada mes.
               </p>
             </div>
+
+            {extras.additional_person.on && (
+              <div className="col-span-2 bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-100">
+                <p className="text-xs font-medium text-gray-600">Datos de la persona adicional</p>
+                <input
+                  required value={addPerson.name}
+                  onChange={(e) => setAddPerson((p) => ({ ...p, name: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                  placeholder="Nombre completo"
+                />
+                <input
+                  required value={addPerson.dpi}
+                  onChange={(e) => setAddPerson((p) => ({ ...p, dpi: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                  placeholder="DPI"
+                />
+                <input
+                  required value={addPerson.phone}
+                  onChange={(e) => setAddPerson((p) => ({ ...p, phone: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                  placeholder="Teléfono"
+                />
+                <input
+                  value={addPerson.phoneAlt}
+                  onChange={(e) => setAddPerson((p) => ({ ...p, phoneAlt: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                  placeholder="Teléfono alternativo (opcional)"
+                />
+                <p className="text-xs text-gray-400">Esta persona no tendrá acceso al portal ni credenciales propias.</p>
+              </div>
+            )}
+
+            {extras.parking.on && (
+              <div className="col-span-2 bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-100">
+                <p className="text-xs font-medium text-gray-600">Datos del vehículo</p>
+                <select
+                  required value={vehicle.type}
+                  onChange={(e) => setVehicle((p) => ({ ...p, type: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                >
+                  <option value="">Tipo de vehículo…</option>
+                  <option value="moto">Moto</option>
+                  <option value="carro">Carro</option>
+                </select>
+                <input
+                  required value={vehicle.brand}
+                  onChange={(e) => setVehicle((p) => ({ ...p, brand: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                  placeholder="Marca"
+                />
+                <input
+                  required value={vehicle.line}
+                  onChange={(e) => setVehicle((p) => ({ ...p, line: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                  placeholder="Línea"
+                />
+                <input
+                  required value={vehicle.color}
+                  onChange={(e) => setVehicle((p) => ({ ...p, color: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                  placeholder="Color"
+                />
+                <input
+                  required value={vehicle.plate}
+                  onChange={(e) => setVehicle((p) => ({ ...p, plate: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                  placeholder="Placa"
+                />
+              </div>
+            )}
 
             <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">

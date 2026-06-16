@@ -118,7 +118,18 @@ create table contracts (
   signed_at          timestamptz,  -- contrato firmado recibido (null = aún no)
   monthly_rent       numeric(10,2),  -- renta negociada; null = precio de lista del tipo
   notes              text,
-  contract_file_path text   -- archivo firmado en bucket 'contracts'
+  contract_file_path text,   -- archivo firmado en bucket 'contracts'
+  has_additional_person       boolean not null default false,
+  additional_person_name      text not null default '',
+  additional_person_dpi       text not null default '',
+  additional_person_phone     text not null default '',
+  additional_person_phone_alt text not null default '',  -- persona adicional autorizada (sin cuenta propia; solo el inquilino principal tiene acceso al portal)
+  has_parking                 boolean not null default false,
+  parking_vehicle_type        text not null default '' check (parking_vehicle_type in ('', 'moto', 'carro')),
+  parking_vehicle_brand       text not null default '',
+  parking_vehicle_line        text not null default '',
+  parking_vehicle_color       text not null default '',
+  parking_vehicle_plate       text not null default ''  -- vehículo autorizado en el parqueo
 );
 
 alter table tenant_profiles

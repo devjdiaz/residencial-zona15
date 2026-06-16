@@ -59,6 +59,17 @@ export interface Contract {
   monthly_rent: number | null
   notes: string | null
   contract_file_path: string | null
+  has_additional_person: boolean
+  additional_person_name: string
+  additional_person_dpi: string
+  additional_person_phone: string
+  additional_person_phone_alt: string
+  has_parking: boolean
+  parking_vehicle_type: string
+  parking_vehicle_brand: string
+  parking_vehicle_line: string
+  parking_vehicle_color: string
+  parking_vehicle_plate: string
   room?: Room
   tenant_profile?: TenantProfile
 }
@@ -169,7 +180,23 @@ export interface Database {
       }
       contracts: {
         Row: Contract
-        Insert: Omit<Contract, "id" | "room" | "tenant_profile" | "signed_at" | "contract_file_path" | "monthly_rent"> & { id?: string; signed_at?: string | null; contract_file_path?: string | null; monthly_rent?: number | null }
+        Insert: Omit<Contract, "id" | "room" | "tenant_profile" | "signed_at" | "contract_file_path" | "monthly_rent" | "has_additional_person" | "additional_person_name" | "additional_person_dpi" | "additional_person_phone" | "additional_person_phone_alt" | "has_parking" | "parking_vehicle_type" | "parking_vehicle_brand" | "parking_vehicle_line" | "parking_vehicle_color" | "parking_vehicle_plate"> & {
+          id?: string
+          signed_at?: string | null
+          contract_file_path?: string | null
+          monthly_rent?: number | null
+          has_additional_person?: boolean
+          additional_person_name?: string
+          additional_person_dpi?: string
+          additional_person_phone?: string
+          additional_person_phone_alt?: string
+          has_parking?: boolean
+          parking_vehicle_type?: string
+          parking_vehicle_brand?: string
+          parking_vehicle_line?: string
+          parking_vehicle_color?: string
+          parking_vehicle_plate?: string
+        }
         Update: Partial<Omit<Contract, "room" | "tenant_profile">>
       }
       tenant_profiles: {

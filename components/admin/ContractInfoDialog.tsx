@@ -74,7 +74,29 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
   const [monthlyRent, setMonthlyRent] = useState(contract.monthly_rent ?? listPrice ?? 0)
   const [waTemplate, setWaTemplate] = useState(contract.whatsapp_template ?? "")
   const [oneTime, setOneTime] = useState<OneTimeState>(DEFAULT_ONE_TIME)
-  const [recurring, setRecurring] = useState<RecurringState>(DEFAULT_RECURRING)
+  const [recurring, setRecurring] = useState<RecurringState>(() => ({
+    ...DEFAULT_RECURRING,
+    additional_person: { ...DEFAULT_RECURRING.additional_person, on: contract.has_additional_person },
+    parking: { ...DEFAULT_RECURRING.parking, on: contract.has_parking },
+  }))
+
+  // Datos de la persona adicional — sin email, nunca tiene cuenta de login; viven en
+  // contracts, no en tenant_profiles.
+  const [addPerson, setAddPerson] = useState({
+    name: contract.additional_person_name,
+    dpi: contract.additional_person_dpi,
+    phone: contract.additional_person_phone,
+    phoneAlt: contract.additional_person_phone_alt,
+  })
+
+  // Datos del vehículo — viven en contracts.
+  const [vehicle, setVehicle] = useState({
+    type: contract.parking_vehicle_type,
+    brand: contract.parking_vehicle_brand,
+    line: contract.parking_vehicle_line,
+    color: contract.parking_vehicle_color,
+    plate: contract.parking_vehicle_plate,
+  })
 
   // Precargar cobros existentes del contrato
   useEffect(() => {
@@ -187,6 +209,22 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
     setSaving(true)
     setError(null)
 
+    if (recurring.additional_person.on) {
+      if (!addPerson.name.trim() || !addPerson.dpi.trim() || !addPerson.phone.trim()) {
+        setError("Completa nombre, DPI y teléfono de la persona adicional, o desmarca la casilla.")
+        setSaving(false)
+        return
+      }
+    }
+
+    if (recurring.parking.on) {
+      if (!vehicle.type || !vehicle.brand.trim() || !vehicle.line.trim() || !vehicle.color.trim() || !vehicle.plate.trim()) {
+        setError("Completa tipo, marca, línea, color y placa del vehículo, o desmarca la casilla de parqueo.")
+        setSaving(false)
+        return
+      }
+    }
+
     const start = new Date(startDate)
     const end = new Date(start)
     end.setMonth(end.getMonth() + durationMonths)
@@ -224,6 +262,17 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
         payment_day: paymentDay,
         monthly_rent: monthlyRent,
         whatsapp_template: waTemplate || null,
+        has_additional_person: recurring.additional_person.on,
+        additional_person_name: recurring.additional_person.on ? addPerson.name.trim() : "",
+        additional_person_dpi: recurring.additional_person.on ? addPerson.dpi.trim() : "",
+        additional_person_phone: recurring.additional_person.on ? addPerson.phone.trim() : "",
+        additional_person_phone_alt: recurring.additional_person.on ? addPerson.phoneAlt.trim() : "",
+        has_parking: recurring.parking.on,
+        parking_vehicle_type: recurring.parking.on ? vehicle.type : "",
+        parking_vehicle_brand: recurring.parking.on ? vehicle.brand.trim() : "",
+        parking_vehicle_line: recurring.parking.on ? vehicle.line.trim() : "",
+        parking_vehicle_color: recurring.parking.on ? vehicle.color.trim() : "",
+        parking_vehicle_plate: recurring.parking.on ? vehicle.plate.trim() : "",
       }).eq("id", contract.id)
       if (contractErr) throw contractErr
 
@@ -370,6 +419,66 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
                     </div>
                   ))}
                 </div>
+                {recurring.additional_person.on && (
+                  <div className="mt-2 bg-white rounded-xl p-3 space-y-2 border border-gray-200">
+                    <p className="text-xs font-medium text-gray-600">Datos de la persona adicional</p>
+                    <input
+                      required value={addPerson.name}
+                      onChange={(e) => setAddPerson((p) => ({ ...p, name: e.target.value }))}
+                      className={inputCls} placeholder="Nombre completo"
+                    />
+                    <input
+                      required value={addPerson.dpi}
+                      onChange={(e) => setAddPerson((p) => ({ ...p, dpi: e.target.value }))}
+                      className={inputCls} placeholder="DPI"
+                    />
+                    <input
+                      required value={addPerson.phone}
+                      onChange={(e) => setAddPerson((p) => ({ ...p, phone: e.target.value }))}
+                      className={inputCls} placeholder="Teléfono"
+                    />
+                    <input
+                      value={addPerson.phoneAlt}
+                      onChange={(e) => setAddPerson((p) => ({ ...p, phoneAlt: e.target.value }))}
+                      className={inputCls} placeholder="Teléfono alternativo (opcional)"
+                    />
+                    <p className="text-xs text-gray-400">Esta persona no tendrá acceso al portal ni credenciales propias.</p>
+                  </div>
+                )}
+                {recurring.parking.on && (
+                  <div className="mt-2 bg-white rounded-xl p-3 space-y-2 border border-gray-200">
+                    <p className="text-xs font-medium text-gray-600">Datos del vehículo</p>
+                    <select
+                      required value={vehicle.type}
+                      onChange={(e) => setVehicle((p) => ({ ...p, type: e.target.value }))}
+                      className={inputCls}
+                    >
+                      <option value="">Tipo de vehículo…</option>
+                      <option value="moto">Moto</option>
+                      <option value="carro">Carro</option>
+                    </select>
+                    <input
+                      required value={vehicle.brand}
+                      onChange={(e) => setVehicle((p) => ({ ...p, brand: e.target.value }))}
+                      className={inputCls} placeholder="Marca"
+                    />
+                    <input
+                      required value={vehicle.line}
+                      onChange={(e) => setVehicle((p) => ({ ...p, line: e.target.value }))}
+                      className={inputCls} placeholder="Línea"
+                    />
+                    <input
+                      required value={vehicle.color}
+                      onChange={(e) => setVehicle((p) => ({ ...p, color: e.target.value }))}
+                      className={inputCls} placeholder="Color"
+                    />
+                    <input
+                      required value={vehicle.plate}
+                      onChange={(e) => setVehicle((p) => ({ ...p, plate: e.target.value }))}
+                      className={inputCls} placeholder="Placa"
+                    />
+                  </div>
+                )}
                 <p className="text-xs text-gray-400 mt-1.5">Se suman a los ingresos cada mes mientras el contrato esté activo.</p>
               </div>
 
@@ -502,6 +611,21 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
                 <span className="text-gray-500">Día de pago</span>
                 <span className="font-medium text-gray-900">Día {contract.payment_day}</span>
               </div>
+              {contract.has_additional_person && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Persona adicional</span>
+                  <span className="font-medium text-gray-900">{contract.additional_person_name || "—"}</span>
+                </div>
+              )}
+              {contract.has_parking && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500">Vehículo</span>
+                  <span className="font-medium text-gray-900 text-right">
+                    {[contract.parking_vehicle_brand, contract.parking_vehicle_line].filter(Boolean).join(" ") || "—"}
+                    {contract.parking_vehicle_plate && ` · ${contract.parking_vehicle_plate}`}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Contrato firmado + envío de credenciales */}
