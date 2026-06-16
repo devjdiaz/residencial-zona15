@@ -255,12 +255,16 @@ create policy "admin_all_photos"    on room_photos     for all
   using      (public.current_user_role() in ('super_admin','admin'))
   with check (public.current_user_role() in ('super_admin','admin'));
 
--- Audit log: any admin can append; only super_admin can read; immutable
-create policy "audit_insert" on audit_log for insert with check ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+-- Audit log: any admin (or guardian) can append; only super_admin can read; immutable
+create policy "audit_insert" on audit_log for insert with check ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin','guardian'));
 create policy "audit_super_read" on audit_log for select using ((auth.jwt()->'user_metadata'->>'role') = 'super_admin');
 
 -- Issue reports: admin full access
 create policy "admin_all_issues" on issue_reports for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+
+-- Issue reports: guardian (mantenimiento) lee y actualiza estado, no crea ni borra
+create policy "guardian_read_issues" on issue_reports for select using ((auth.jwt()->'user_metadata'->>'role') = 'guardian');
+create policy "guardian_update_issues" on issue_reports for update using ((auth.jwt()->'user_metadata'->>'role') = 'guardian');
 
 -- Tenant: read own profile and contract, insert receipt for own contract
 create policy "tenant_own_profile"  on tenant_profiles  for select using (auth.uid() = id);

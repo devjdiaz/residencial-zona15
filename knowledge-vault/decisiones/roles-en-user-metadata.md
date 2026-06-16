@@ -9,10 +9,12 @@ estado: vigente
 Volver a [[00-Indice]] · [[arquitectura]].
 
 ## Contexto
-El sistema necesita tres roles: `super_admin`, `admin`, `tenant`.
+El sistema necesita roles: `super_admin`, `admin`, `tenant` y (desde 2026-06-16) `guardian`.
 
 ## Decisión
-Guardar el rol en `auth.users.user_metadata.role`. Se asigna al crear el usuario (ver `app/api/admin/create-staff` y `create-tenant`).
+Guardar el rol en `auth.users.user_metadata.role`. Se asigna al crear el usuario (ver `app/api/admin/create-staff` —ahora acepta `role: "admin" | "guardian"`— y `create-tenant`, que sigue fijo a `"tenant"`).
+
+El rol `guardian` se agregó para Julio (mantenimiento): necesitaba ver y actualizar reportes de daños sin acceso al resto del panel admin. No se reutilizó `admin` con una vista recortada porque eso solo oculta enlaces en la UI — la URL seguiría siendo accesible. Se siguió el mismo patrón ya usado para separar `/admin` de `/tenant`: una tercera área `/guardian` con su propio login, protegida por middleware + RLS propia (`guardian_read_issues`/`guardian_update_issues` en `issue_reports`, sin policy en ninguna otra tabla). Detalle: [[rol-guardian]].
 
 ## Consecuencias
 - ✅ Simple: el rol viaja en el JWT y en `auth.users`.

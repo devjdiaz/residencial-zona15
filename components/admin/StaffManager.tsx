@@ -12,7 +12,14 @@ interface Staff {
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super admin",
   admin: "Admin",
+  guardian: "Guardián",
 }
+
+const ROLE_BADGE: Record<string, string> = {
+  super_admin: "bg-amber-50 text-amber-700 border-amber-200",
+  guardian: "bg-blue-50 text-blue-700 border-blue-200",
+}
+const DEFAULT_BADGE = "bg-gray-50 text-gray-600 border-gray-200"
 
 export default function StaffManager({ currentUserId }: { currentUserId: string }) {
   const [staff, setStaff] = useState<Staff[]>([])
@@ -20,6 +27,7 @@ export default function StaffManager({ currentUserId }: { currentUserId: string 
   const [showAdd, setShowAdd] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [role, setRole] = useState<"admin" | "guardian">("admin")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,12 +47,12 @@ export default function StaffManager({ currentUserId }: { currentUserId: string 
       const res = await fetch("/api/admin/create-staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, role }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Error al crear")
-      logAudit(`Creó cuenta admin — ${email}`, "staff", email)
-      setShowAdd(false); setEmail(""); setPassword("")
+      logAudit(`Creó cuenta ${ROLE_LABELS[role]} — ${email}`, "staff", email)
+      setShowAdd(false); setEmail(""); setPassword(""); setRole("admin")
       await load()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al crear")
@@ -71,7 +79,7 @@ export default function StaffManager({ currentUserId }: { currentUserId: string 
       <div className="flex justify-end">
         <button onClick={() => setShowAdd(!showAdd)}
           className="text-xs px-3 py-1.5 rounded-lg bg-[#b64532] text-white font-medium hover:bg-[#9a3727] transition-colors">
-          + Agregar admin
+          + Agregar cuenta
         </button>
       </div>
 
@@ -89,6 +97,14 @@ export default function StaffManager({ currentUserId }: { currentUserId: string 
               <input type="text" required value={password} onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
                 placeholder="mín. 8 caracteres" minLength={8} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Rol</label>
+              <select value={role} onChange={(e) => setRole(e.target.value as "admin" | "guardian")}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40">
+                <option value="admin">Admin — acceso a todo el panel</option>
+                <option value="guardian">Guardián — solo ve y gestiona Reportes</option>
+              </select>
             </div>
           </div>
           {error && <p className="text-xs text-red-600">{error}</p>}
@@ -122,7 +138,7 @@ export default function StaffManager({ currentUserId }: { currentUserId: string 
                   <tr key={s.id}>
                     <td className="px-4 py-2.5 text-gray-800">{s.email}</td>
                     <td className="px-4 py-2.5">
-                      <span className={`text-xs px-2 py-0.5 rounded-full border ${s.role === "super_admin" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-50 text-gray-600 border-gray-200"}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${ROLE_BADGE[s.role] ?? DEFAULT_BADGE}`}>
                         {ROLE_LABELS[s.role] ?? s.role}
                       </span>
                     </td>
@@ -144,7 +160,7 @@ export default function StaffManager({ currentUserId }: { currentUserId: string 
               <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm text-gray-800 truncate">{s.email}</p>
-                  <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full border ${s.role === "super_admin" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-50 text-gray-600 border-gray-200"}`}>
+                  <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full border ${ROLE_BADGE[s.role] ?? DEFAULT_BADGE}`}>
                     {ROLE_LABELS[s.role] ?? s.role}
                   </span>
                 </div>

@@ -24,8 +24,8 @@ Volver a [[00-Indice]]. Fuente: `supabase/schema.sql` + migraciones en `supabase
 | `expenses` | gastos por propiedad/compartidos | admin todo |
 | `income_extras` | cargos únicos (depósito, firma, persona extra, parqueo) | admin todo + dueño lee |
 | `recurring_charges` | cargos mensuales recurrentes | admin todo + dueño lee |
-| `audit_log` | bitácora append-only | admin inserta + **solo super_admin lee** |
-| `issue_reports` | daños reportados por inquilino | dueño inserta/lee + admin todo |
+| `audit_log` | bitácora append-only | admin/guardian inserta + **solo super_admin lee** |
+| `issue_reports` | daños reportados por inquilino | dueño inserta/lee + admin todo + **guardian lee/actualiza estado** |
 
 ## Patrón RLS de admin
 La mayoría de policies de admin usan:
@@ -53,6 +53,7 @@ Usada por las policies del bucket `room-photos`. El porqué: [[2026-06-08-rls-fo
 - `2026-06-15_tenant-dpi-phone-alt.sql` — `tenant_profiles.dpi` y `tenant_profiles.phone_alt` (text, default `''`), para que el PDF del contrato salga completo. Ver [[renta-por-contrato]].
 - `2026-06-16_contract-additional-person.sql` — `contracts.has_additional_person` (boolean) y `contracts.additional_person_name/dpi/phone/phone_alt` (text, default `''`). Datos de la persona adicional autorizada para el PDF; vive en `contracts` (no en `tenant_profiles`) porque nunca tiene cuenta de login — solo el inquilino principal accede a la plataforma. Reutiliza el checkbox existente "Persona adicional (mensual)" de `ContractDialog`/`ContractInfoDialog`. Ver [[reforma-contrato-2026-06]].
 - `2026-06-16_contract-parking-vehicle.sql` — `contracts.has_parking` (boolean) y `contracts.parking_vehicle_type/brand/line/color/plate` (text, default `''`; `parking_vehicle_type` con `check` limitado a `''`/`moto`/`carro`). Datos del vehículo autorizado en el parqueo para el PDF; reutiliza el checkbox existente "Parqueo (mensual)". Ver [[reforma-contrato-2026-06]].
+- `2026-06-16_guardian-role.sql` — policies `guardian_read_issues`/`guardian_update_issues` en `issue_reports` (select/update, sin insert/delete) y ampliación de `audit_insert` para incluir `guardian`. No agrega columnas. Ver [[rol-guardian]].
 
 > [!info] Sincronización del email
 > La fuente de verdad del email sigue siendo `auth.users` (credencial de login). `tenant_profiles.email` es una copia para la UI. La **única** vía de escritura es `/api/admin/update-tenant-email` (actualiza ambos con service client). Si se desincroniza, re-ejecutar el backfill de la migración.
