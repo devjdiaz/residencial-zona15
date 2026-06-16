@@ -28,4 +28,4 @@ Nuevo rol `guardian` en `user_metadata.role`, con su propia área `/guardian` (l
 - `components/admin/StaffManager.tsx`: selector de rol al crear cuenta, badge visual distinto para guardián.
 
 ## Estado
-Código completo. `tsc --noEmit` limpio; `eslint` limpio salvo un error preexistente no relacionado en `StaffManager.tsx` (`react-hooks/set-state-in-effect`, ya existía antes de este cambio). Migración pendiente de aplicar en producción por el usuario. Rama `feature/rol-guardian`, sin commit todavía.
+Código completo. `tsc --noEmit` limpio; `eslint` limpio salvo un error preexistente no relacionado en `StaffManager.tsx` (`react-hooks/set-state-in-effect`, ya existía antes de este cambio). Rama `feature/rol-guardian`, commit `7386e1b`. **PR #10 mergeado a `main`** el 2026-06-16 (merge commit `988085d`). Migración `2026-06-16_guardian-role.sql` pendiente de confirmar si ya se aplicó en producción.
