@@ -45,7 +45,7 @@ function RoomCard({
   const [showCredentials, setShowCredentials] = useState(false)
   const [showPhotos, setShowPhotos] = useState(false)
   const [photoCount, setPhotoCount] = useState(room.room_photos?.length ?? 0)
-  const [newCredentials, setNewCredentials] = useState<{ email: string; password: string } | null>(null)
+  const [newCredentials, setNewCredentials] = useState<{ email: string; password: string; name: string; phone: string } | null>(null)
 
   const payDays = contract ? daysUntilPayment(contract.payment_day) : null
   const paymentDue = payDays !== null && payDays <= 3

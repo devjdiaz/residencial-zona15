@@ -136,7 +136,7 @@ export default function FinancesPanel() {
         const contract = (contracts ?? []).find((c) => c.id === r.contract_id)
         return {
           receipt: r,
-          tenant: contract?.tenant_profile ?? { id: "", room_id: "", contract_id: "", name: "—", phone: "" },
+          tenant: contract?.tenant_profile ?? { id: "", room_id: "", contract_id: "", name: "—", phone: "", email: "" },
           roomId: contract?.room_id ?? "",
           roomIdentifier: contract?.room?.identifier ?? "—",
         }

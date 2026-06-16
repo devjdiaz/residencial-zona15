@@ -55,6 +55,7 @@ export interface Contract {
   payment_day: number
   whatsapp_template: string | null
   status: ContractStatus
+  signed_at: string | null
   notes: string | null
   room?: Room
   tenant_profile?: TenantProfile
@@ -66,6 +67,7 @@ export interface TenantProfile {
   contract_id: string
   name: string
   phone: string
+  email: string
 }
 
 export interface PaymentReceipt {
@@ -163,7 +165,7 @@ export interface Database {
       }
       contracts: {
         Row: Contract
-        Insert: Omit<Contract, "id" | "room" | "tenant_profile"> & { id?: string }
+        Insert: Omit<Contract, "id" | "room" | "tenant_profile" | "signed_at"> & { id?: string; signed_at?: string | null }
         Update: Partial<Omit<Contract, "room" | "tenant_profile">>
       }
       tenant_profiles: {

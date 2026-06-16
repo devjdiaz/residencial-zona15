@@ -1,14 +1,24 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { waLink, getContractTemplateUrl } from "@/lib/whatsapp"
+import { logAudit } from "@/lib/audit"
 
 interface Props {
-  credentials: { email: string; password: string }
+  credentials: { email: string; password: string; name: string; phone: string }
   roomIdentifier: string
   onClose: () => void
 }
 
 export default function CredentialsDialog({ credentials, roomIdentifier, onClose }: Props) {
   const [copied, setCopied] = useState(false)
+  const [templateUrl, setTemplateUrl] = useState<string | null>(null)
+  const [templateLoading, setTemplateLoading] = useState(true)
+
+  useEffect(() => {
+    getContractTemplateUrl()
+      .then(setTemplateUrl)
+      .finally(() => setTemplateLoading(false))
+  }, [])
 
   function copyAll() {
     const text = `Habitación ${roomIdentifier} — Portal de inquilinos\nURL: ${window.location.origin}/tenant/login\nUsuario: ${credentials.email}\nContraseña: ${credentials.password}`
@@ -16,6 +26,18 @@ export default function CredentialsDialog({ credentials, roomIdentifier, onClose
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
+  }
+
+  const hasPhone = credentials.phone.replace(/\D/g, "").length > 0
+  const canSendTemplate = !templateLoading && templateUrl !== null && hasPhone
+
+  function sendTemplateWhatsApp() {
+    if (!templateUrl) return
+    const msg = `Hola ${credentials.name}, ¡bienvenido/a! Descarga la plantilla de tu contrato aquí:\n${templateUrl}\nPor favor llénala con tu información y entrégala firmada a la administración. ¡Gracias!`
+    const link = waLink(credentials.phone, msg)
+    if (!link) return
+    window.open(link, "_blank")
+    logAudit(`Envió plantilla de contrato por WhatsApp — Hab. ${roomIdentifier} (${credentials.name})`, "contract", roomIdentifier)
   }
 
   return (
@@ -44,6 +66,26 @@ export default function CredentialsDialog({ credentials, roomIdentifier, onClose
             <p className="text-xs font-medium text-gray-500 mb-0.5">Contraseña</p>
             <p className="text-sm font-mono font-semibold text-gray-900">{credentials.password}</p>
           </div>
+        </div>
+
+        <div>
+          <button
+            onClick={sendTemplateWhatsApp}
+            disabled={!canSendTemplate}
+            className="w-full py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {templateLoading ? "Buscando plantilla…" : "📄 Enviar plantilla de contrato por WhatsApp"}
+          </button>
+          {!templateLoading && !templateUrl && (
+            <p className="text-xs text-gray-400 mt-1 text-center">
+              Sin plantilla — súbela en Habitaciones → Plantilla de contrato.
+            </p>
+          )}
+          {!templateLoading && templateUrl && !hasPhone && (
+            <p className="text-xs text-gray-400 mt-1 text-center">
+              El inquilino no tiene teléfono registrado.
+            </p>
+          )}
         </div>
 
         <div className="flex gap-2">
