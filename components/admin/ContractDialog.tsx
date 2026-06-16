@@ -6,7 +6,7 @@ import { logAudit } from "@/lib/audit"
 interface Props {
   room: Room & { room_type?: { label: string; price: number } }
   onClose: () => void
-  onCreated: (credentials: { email: string; password: string; name: string; phone: string }) => void
+  onCreated: (credentials: { email: string; password: string; name: string; phone: string; contractId: string }) => void
 }
 
 function generatePassword(length = 12) {
@@ -21,8 +21,11 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
+  const [phoneAlt, setPhoneAlt] = useState("")
+  const [dpi, setDpi] = useState("")
   const [startDate, setStartDate] = useState(today)
   const [durationMonths, setDurationMonths] = useState(6)
+  const [monthlyRent, setMonthlyRent] = useState(room.room_type?.price ?? 0)
   const [paymentDay, setPaymentDay] = useState(new Date().getDate())
   const [waTemplate, setWaTemplate] = useState("")
   const [loading, setLoading] = useState(false)
@@ -82,7 +85,9 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
         contract_id: null,
         name,
         phone,
+        phone_alt: phoneAlt,
         email,
+        dpi,
       })
       if (profileErr) throw profileErr
 
@@ -97,6 +102,7 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
           duration_months: durationMonths,
           end_date: endDate,
           payment_day: paymentDay,
+          monthly_rent: monthlyRent,
           whatsapp_template: waTemplate || null,
           status: "active",
         })
@@ -135,7 +141,7 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
       await (supabase as any).from("rooms").update({ status: "occupied" }).eq("id", room.id)
 
       logAudit(`Creó contrato — Hab. ${room.identifier} (${name})`, "contract", room.identifier)
-      onCreated({ email, password, name, phone })
+      onCreated({ email, password, name, phone, contractId: contractData.id })
     } catch (err: unknown) {
       const msg = err instanceof Error
         ? err.message
@@ -187,6 +193,33 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
                 placeholder="+502 XXXX-XXXX"
               />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono alternativo (opcional)</label>
+              <input
+                value={phoneAlt} onChange={(e) => setPhoneAlt(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                placeholder="+502 XXXX-XXXX"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">DPI</label>
+              <input
+                value={dpi} onChange={(e) => setDpi(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                placeholder="0000 00000 0000"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Renta mensual (Q)</label>
+              <input
+                type="number" min={0} required value={monthlyRent}
+                onChange={(e) => setMonthlyRent(Number(e.target.value))}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Prellenado con el precio de lista{room.room_type ? ` (Q${room.room_type.price.toLocaleString()})` : ""} — ajústalo si este inquilino paga diferente.
+              </p>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de inicio</label>

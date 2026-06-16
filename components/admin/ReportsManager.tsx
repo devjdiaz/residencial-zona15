@@ -21,7 +21,8 @@ const FILTERS: { key: IssueStatus | "all"; label: string }[] = [
   { key: "all", label: "Todos" },
 ]
 
-export default function ReportsManager() {
+// roomId: filtra los reportes de una sola habitación (módulo Historial)
+export default function ReportsManager({ roomId }: { roomId?: string } = {}) {
   const [reports, setReports] = useState<ReportRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<IssueStatus | "all">("open")
@@ -30,15 +31,18 @@ export default function ReportsManager() {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL) { setLoading(false); return }
     const { createClient } = await import("@/lib/supabase/client")
     const sb = createClient()
-    const { data } = await sb
+    let query = sb
       .from("issue_reports")
       .select("*, room:rooms(identifier), property:properties(name)")
       .order("created_at", { ascending: false })
+    if (roomId) query = query.eq("room_id", roomId)
+    const { data } = await query
     setReports((data as ReportRow[]) ?? [])
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [roomId])
 
   async function setStatus(r: ReportRow, status: IssueStatus) {
     const { createClient } = await import("@/lib/supabase/client")
@@ -80,8 +84,14 @@ export default function ReportsManager() {
             <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
-                  <span className="text-sm font-semibold text-gray-900">Hab. {r.room?.identifier ?? "—"}</span>
-                  <span className="text-xs text-gray-400 ml-2">{r.property?.name ?? ""} · {r.tenant_name ?? ""}</span>
+                  {roomId ? (
+                    <span className="text-sm font-semibold text-gray-900">{r.tenant_name ?? "—"}</span>
+                  ) : (
+                    <>
+                      <span className="text-sm font-semibold text-gray-900">Hab. {r.room?.identifier ?? "—"}</span>
+                      <span className="text-xs text-gray-400 ml-2">{r.property?.name ?? ""} · {r.tenant_name ?? ""}</span>
+                    </>
+                  )}
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full border flex-shrink-0 ${STATUS_META[r.status].badge}`}>
                   {STATUS_META[r.status].label}

@@ -82,6 +82,7 @@ export default function AdminHeader() {
               </span>
             )}
           </a>
+          <a href="/admin/historial" className={linkClass("/admin/historial")}>Historial</a>
           {isSuper && <a href="/admin/bitacora" className={linkClass("/admin/bitacora")}>Bitácora</a>}
           {isSuper && <a href="/admin/personal" className={linkClass("/admin/personal")}>Personal</a>}
           <button onClick={() => setShowAccount(true)}
@@ -125,6 +126,7 @@ export default function AdminHeader() {
             <a href="/admin/reportes" className={mobileLinkClass("/admin/reportes")}>
               Reportes{reportesBadge}
             </a>
+            <a href="/admin/historial" className={mobileLinkClass("/admin/historial")}>Historial</a>
             {isSuper && <a href="/admin/bitacora" className={mobileLinkClass("/admin/bitacora")}>Bitácora</a>}
             {isSuper && <a href="/admin/personal" className={mobileLinkClass("/admin/personal")}>Personal</a>}
             <div className="pt-1 mt-1 border-t border-gray-100">

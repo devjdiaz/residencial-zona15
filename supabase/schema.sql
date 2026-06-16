@@ -98,7 +98,10 @@ create table tenant_profiles (
   room_id     uuid references rooms on delete set null,
   contract_id uuid,
   name        text not null,
-  phone       text not null default ''
+  phone       text not null default '',
+  phone_alt   text not null default '',  -- teléfono alternativo (para el PDF del contrato)
+  email       text not null default '',  -- copia del email de auth.users (login); se sincroniza vía /api/admin/update-tenant-email
+  dpi         text not null default ''   -- documento personal de identificación (para el PDF del contrato)
 );
 
 -- ── Contracts ──────────────────────────────────────────────
@@ -112,7 +115,10 @@ create table contracts (
   payment_day        int  not null default 1 check (payment_day between 1 and 31),
   whatsapp_template  text,
   status             text not null default 'active' check (status in ('active','ended')),
-  notes              text
+  signed_at          timestamptz,  -- contrato firmado recibido (null = aún no)
+  monthly_rent       numeric(10,2),  -- renta negociada; null = precio de lista del tipo
+  notes              text,
+  contract_file_path text   -- archivo firmado en bucket 'contracts'
 );
 
 alter table tenant_profiles
@@ -268,8 +274,9 @@ create policy "tenant_own_issues_read"   on issue_reports for select using (tena
 
 -- =============================================================
 -- Storage buckets (create in Supabase dashboard or via CLI)
--- bucket: room-photos  (public)
--- bucket: receipts     (private, tenant-scoped)
+-- bucket: room-photos        (public)
+-- bucket: receipts           (private, tenant-scoped)
+-- bucket: contracts          (private, admin-only)
 -- =============================================================
 
 -- Storage policies for room-photos: public read, admin write.
@@ -295,3 +302,26 @@ create policy "room_photos_admin_delete"
 create policy "room_photos_admin_update"
   on storage.objects for update to authenticated
   using ( bucket_id = 'room-photos' and public.current_user_role() in ('super_admin','admin') );
+
+-- Storage policies for contracts (signed contract files): admin-only.
+drop policy if exists "contracts_admin_read"   on storage.objects;
+drop policy if exists "contracts_admin_insert" on storage.objects;
+drop policy if exists "contracts_admin_update" on storage.objects;
+drop policy if exists "contracts_admin_delete" on storage.objects;
+
+create policy "contracts_admin_read"
+  on storage.objects for select to authenticated
+  using ( bucket_id = 'contracts' and public.current_user_role() in ('super_admin','admin') );
+
+create policy "contracts_admin_insert"
+  on storage.objects for insert to authenticated
+  with check ( bucket_id = 'contracts' and public.current_user_role() in ('super_admin','admin') );
+
+create policy "contracts_admin_update"
+  on storage.objects for update to authenticated
+  using ( bucket_id = 'contracts' and public.current_user_role() in ('super_admin','admin') )
+  with check ( bucket_id = 'contracts' and public.current_user_role() in ('super_admin','admin') );
+
+create policy "contracts_admin_delete"
+  on storage.objects for delete to authenticated
+  using ( bucket_id = 'contracts' and public.current_user_role() in ('super_admin','admin') );

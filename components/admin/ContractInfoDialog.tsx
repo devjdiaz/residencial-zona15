@@ -3,10 +3,12 @@ import { useEffect, useState } from "react"
 import type { Contract, TenantProfile } from "@/lib/supabase/types"
 import { logAudit } from "@/lib/audit"
 import { waLink, tenantPortalUrl } from "@/lib/whatsapp"
+import ContractFileManager from "./ContractFileManager"
 
 interface Props {
   contract: Contract & { tenant_profile?: TenantProfile }
   roomIdentifier: string
+  listPrice?: number | null  // precio de lista del tipo de habitación (fallback si el contrato no tiene renta propia)
   onClose: () => void
   onUpdated: () => void
 }
@@ -47,7 +49,7 @@ const DEFAULT_RECURRING: RecurringState = {
   parking:           { on: false, amount: 200 },
 }
 
-export default function ContractInfoDialog({ contract, roomIdentifier, onClose, onUpdated }: Props) {
+export default function ContractInfoDialog({ contract, roomIdentifier, listPrice, onClose, onUpdated }: Props) {
   const tenant = contract.tenant_profile
   const [newPassword, setNewPassword] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
@@ -63,10 +65,13 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
 
   const [name, setName] = useState(tenant?.name ?? "")
   const [phone, setPhone] = useState(tenant?.phone ?? "")
+  const [phoneAlt, setPhoneAlt] = useState(tenant?.phone_alt ?? "")
   const [email, setEmail] = useState(tenant?.email ?? "")
+  const [dpi, setDpi] = useState(tenant?.dpi ?? "")
   const [startDate, setStartDate] = useState(contract.start_date)
   const [durationMonths, setDurationMonths] = useState(contract.duration_months)
   const [paymentDay, setPaymentDay] = useState(contract.payment_day)
+  const [monthlyRent, setMonthlyRent] = useState(contract.monthly_rent ?? listPrice ?? 0)
   const [waTemplate, setWaTemplate] = useState(contract.whatsapp_template ?? "")
   const [oneTime, setOneTime] = useState<OneTimeState>(DEFAULT_ONE_TIME)
   const [recurring, setRecurring] = useState<RecurringState>(DEFAULT_RECURRING)
@@ -207,7 +212,7 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
 
       // 1. Datos del inquilino (el email ya lo sincronizó la API)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: profileErr } = await (supabase as any).from("tenant_profiles").update({ name, phone }).eq("id", contract.tenant_profile_id)
+      const { error: profileErr } = await (supabase as any).from("tenant_profiles").update({ name, phone, phone_alt: phoneAlt, dpi }).eq("id", contract.tenant_profile_id)
       if (profileErr) throw profileErr
 
       // 2. Datos del contrato
@@ -217,6 +222,7 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
         duration_months: durationMonths,
         end_date: endDate,
         payment_day: paymentDay,
+        monthly_rent: monthlyRent,
         whatsapp_template: waTemplate || null,
       }).eq("id", contract.id)
       if (contractErr) throw contractErr
@@ -304,6 +310,14 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
                 <label className="block text-xs font-medium text-gray-600 mb-1">WhatsApp / Teléfono</label>
                 <input required value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="+502 XXXX-XXXX" />
               </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono alternativo (opcional)</label>
+                <input value={phoneAlt} onChange={(e) => setPhoneAlt(e.target.value)} className={inputCls} placeholder="+502 XXXX-XXXX" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">DPI</label>
+                <input value={dpi} onChange={(e) => setDpi(e.target.value)} className={inputCls} placeholder="0000 00000 0000" />
+              </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de inicio</label>
                 <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputCls} />
@@ -315,6 +329,13 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Día de corte de pago (día del mes)</label>
                 <input type="number" min={1} max={31} required value={paymentDay} onChange={(e) => setPaymentDay(Number(e.target.value))} className={inputCls} />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Renta mensual (Q)</label>
+                <input type="number" min={0} required value={monthlyRent} onChange={(e) => setMonthlyRent(Number(e.target.value))} className={inputCls} />
+                <p className="text-xs text-gray-400 mt-1">
+                  Lo que paga este inquilino{listPrice ? ` (precio de lista: Q${listPrice.toLocaleString()})` : ""}. Finanzas y el portal del inquilino usan este monto.
+                </p>
               </div>
 
               {/* Cobros mensuales (recurrentes) */}
@@ -447,10 +468,24 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
                 <span className="text-gray-500">Teléfono</span>
                 <span className="font-medium text-gray-900">{tenant?.phone ?? "—"}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Teléfono alt.</span>
+                <span className="font-medium text-gray-900">{tenant?.phone_alt || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">DPI</span>
+                <span className="font-medium text-gray-900">{tenant?.dpi || "—"}</span>
+              </div>
             </div>
 
             {/* Contract info */}
             <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Renta mensual</span>
+                <span className="font-medium text-gray-900">
+                  {(contract.monthly_rent ?? listPrice) != null ? `Q${Number(contract.monthly_rent ?? listPrice).toLocaleString()}` : "—"}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Inicio</span>
                 <span className="font-medium text-gray-900">{startDateLabel}</span>
@@ -511,6 +546,14 @@ export default function ContractInfoDialog({ contract, roomIdentifier, onClose, 
                 </div>
               )}
             </div>
+
+            {/* Archivo del contrato firmado (bucket 'contracts') */}
+            <ContractFileManager
+              contractId={contract.id}
+              roomIdentifier={roomIdentifier}
+              filePath={contract.contract_file_path ?? null}
+              onUpdated={onUpdated}
+            />
 
             {/* Reset password */}
             {newPassword ? (
