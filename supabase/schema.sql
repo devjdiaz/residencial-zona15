@@ -275,7 +275,6 @@ create policy "tenant_own_issues_read"   on issue_reports for select using (tena
 -- bucket: room-photos        (public)
 -- bucket: receipts           (private, tenant-scoped)
 -- bucket: contracts          (private, admin-only)
--- bucket: contract-templates (public read — plantilla que el inquilino descarga sin sesión)
 -- =============================================================
 
 -- Storage policies for room-photos: public read, admin write.
@@ -324,27 +323,3 @@ create policy "contracts_admin_update"
 create policy "contracts_admin_delete"
   on storage.objects for delete to authenticated
   using ( bucket_id = 'contracts' and public.current_user_role() in ('super_admin','admin') );
-
--- Storage policies for contract-templates (plantilla del contrato):
--- lectura pública (el inquilino la descarga desde el link de WhatsApp sin
--- sesión), escritura solo admin. Un solo archivo en la raíz (la vigente).
-drop policy if exists "contract_templates_public_read"  on storage.objects;
-drop policy if exists "contract_templates_admin_insert" on storage.objects;
-drop policy if exists "contract_templates_admin_update" on storage.objects;
-drop policy if exists "contract_templates_admin_delete" on storage.objects;
-
-create policy "contract_templates_public_read"
-  on storage.objects for select
-  using ( bucket_id = 'contract-templates' );
-
-create policy "contract_templates_admin_insert"
-  on storage.objects for insert to authenticated
-  with check ( bucket_id = 'contract-templates' and public.current_user_role() in ('super_admin','admin') );
-
-create policy "contract_templates_admin_update"
-  on storage.objects for update to authenticated
-  using ( bucket_id = 'contract-templates' and public.current_user_role() in ('super_admin','admin') );
-
-create policy "contract_templates_admin_delete"
-  on storage.objects for delete to authenticated
-  using ( bucket_id = 'contract-templates' and public.current_user_role() in ('super_admin','admin') );

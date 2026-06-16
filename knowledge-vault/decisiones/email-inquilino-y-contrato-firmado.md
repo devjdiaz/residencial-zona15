@@ -33,5 +33,8 @@ El ciclo del contrato se cierra por WhatsApp: (1) al crear el contrato se envía
 ## Archivos clave
 - `supabase/migrations/2026-06-12_email-signed-template.sql`
 - `app/api/admin/update-tenant-email/route.ts`
-- `lib/whatsapp.ts` (`waLink`, `getContractTemplateUrl`, `tenantPortalUrl`)
-- `components/admin/ContractTemplateDialog.tsx`, `CredentialsDialog.tsx`, `ContractInfoDialog.tsx`, `ContractDialog.tsx`, `RoomsView.tsx`
+- `lib/whatsapp.ts` (`waLink`, `tenantPortalUrl`)
+- `components/admin/CredentialsDialog.tsx`, `ContractInfoDialog.tsx`, `ContractDialog.tsx`, `RoomsView.tsx`
+
+## Superseded — punto 4 removido (2026-06-15)
+La plantilla en blanco (`contract-templates`) se descartó: una vez que existe el **PDF autogenerado por contrato** (ver [[renta-por-contrato]]), enviar un formulario en blanco para llenar a mano es estrictamente peor — el PDF ya llega con los datos del inquilino. Se eliminó `ContractTemplateDialog.tsx`, `getContractTemplateUrl`, el botón en `RoomsView`, y el bucket + policies en producción (migración `2026-06-15_remove-contract-template-bucket.sql`; el bucket/objetos se borraron vía Storage API porque Supabase no permite `delete` directo sobre `storage.objects`/`storage.buckets` por SQL). `CredentialsDialog` ahora solo tiene "Enviar contrato por WhatsApp" (el PDF). Detalle en [[2026-06-15]].

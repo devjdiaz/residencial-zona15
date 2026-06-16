@@ -49,6 +49,7 @@ Usada por las policies del bucket `room-photos`. El porqué: [[2026-06-08-rls-fo
 - `2026-06-12_email-signed-template.sql` — `tenant_profiles.email` (con backfill desde `auth.users`), `contracts.signed_at`, bucket `contract-templates` + policies. Idempotente. Ver [[email-inquilino-y-contrato-firmado]].
 - `2026-06-12_historial-contract-file.sql` — `contracts.contract_file_path`, bucket privado `contracts` + policies solo-admin. Idempotente. Ver [[2026-06-12-historial-y-archivo-contrato]].
 - `2026-06-12_monthly-rent.sql` — `contracts.monthly_rent` (renta negociada por contrato) con backfill del precio de lista a los contratos existentes. Idempotente. Ver [[renta-por-contrato]].
+- `2026-06-15_remove-contract-template-bucket.sql` — quita las policies de `contract-templates` (el bucket y sus objetos se borraron por la Storage API, no por SQL). Ver [[2026-06-15]].
 
 > [!info] Sincronización del email
 > La fuente de verdad del email sigue siendo `auth.users` (credencial de login). `tenant_profiles.email` es una copia para la UI. La **única** vía de escritura es `/api/admin/update-tenant-email` (actualiza ambos con service client). Si se desincroniza, re-ejecutar el backfill de la migración.
@@ -56,7 +57,6 @@ Usada por las policies del bucket `room-photos`. El porqué: [[2026-06-08-rls-fo
 ## Storage buckets
 - **`room-photos`** — público para lectura; escritura (insert/delete/update) solo admin vía `current_user_role()`. Path: `rooms/{roomId}/{timestamp}-{filename}`.
 - **`receipts`** — privado, scoped por tenant. Path: `{user.id}/{periodo}/{filename}`.
-- **`contract-templates`** — público para lectura (el inquilino descarga la plantilla desde el link de WhatsApp sin sesión); escritura solo admin vía `current_user_role()`. Un solo archivo en la raíz (la plantilla vigente); al reemplazar se borra el anterior.
 - **`contracts`** — privado, solo admin (lectura y escritura vía `current_user_role()`). Contratos firmados escaneados. Path: `{contract_id}/{filename}`; lectura por signed URL (300s); al reemplazar con otro nombre se borra el anterior.
 
 > [!warning] Bucket público ≠ escritura pública

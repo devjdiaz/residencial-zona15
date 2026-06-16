@@ -1,7 +1,6 @@
 "use client"
 import { useState } from "react"
 import RoomGrid from "./RoomGrid"
-import ContractTemplateDialog from "./ContractTemplateDialog"
 
 interface Property { id: string; name: string; slug: string }
 
@@ -14,31 +13,22 @@ const LEGEND = [
 
 export default function RoomsView({ properties }: { properties: Property[] }) {
   const [activeId, setActiveId] = useState(properties[0]?.id ?? "")
-  const [showTemplate, setShowTemplate] = useState(false)
 
   return (
     <>
       {/* Property tabs — client toggle, no reload */}
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 w-fit max-w-full overflow-x-auto">
-          {properties.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setActiveId(p.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                p.id === activeId ? "bg-[#b64532] text-white shadow-sm" : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {p.name}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={() => setShowTemplate(true)}
-          className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-        >
-          📄 Plantilla de contrato
-        </button>
+      <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 w-fit max-w-full overflow-x-auto mb-6">
+        {properties.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setActiveId(p.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              p.id === activeId ? "bg-[#b64532] text-white shadow-sm" : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {p.name}
+          </button>
+        ))}
       </div>
 
       {/* Status legend */}
@@ -52,8 +42,6 @@ export default function RoomsView({ properties }: { properties: Property[] }) {
       </div>
 
       <RoomGrid propertyId={activeId} />
-
-      {showTemplate && <ContractTemplateDialog onClose={() => setShowTemplate(false)} />}
     </>
   )
 }
