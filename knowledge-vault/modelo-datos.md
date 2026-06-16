@@ -50,6 +50,7 @@ Usada por las policies del bucket `room-photos`. El porqué: [[2026-06-08-rls-fo
 - `2026-06-12_historial-contract-file.sql` — `contracts.contract_file_path`, bucket privado `contracts` + policies solo-admin. Idempotente. Ver [[2026-06-12-historial-y-archivo-contrato]].
 - `2026-06-12_monthly-rent.sql` — `contracts.monthly_rent` (renta negociada por contrato) con backfill del precio de lista a los contratos existentes. Idempotente. Ver [[renta-por-contrato]].
 - `2026-06-15_remove-contract-template-bucket.sql` — quita las policies de `contract-templates` (el bucket y sus objetos se borraron por la Storage API, no por SQL). Ver [[2026-06-15]].
+- `2026-06-15_tenant-dpi-phone-alt.sql` — `tenant_profiles.dpi` y `tenant_profiles.phone_alt` (text, default `''`), para que el PDF del contrato salga completo. Ver [[renta-por-contrato]].
 
 > [!info] Sincronización del email
 > La fuente de verdad del email sigue siendo `auth.users` (credencial de login). `tenant_profiles.email` es una copia para la UI. La **única** vía de escritura es `/api/admin/update-tenant-email` (actualiza ambos con service client). Si se desincroniza, re-ejecutar el backfill de la migración.

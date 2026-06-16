@@ -21,6 +21,8 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
+  const [phoneAlt, setPhoneAlt] = useState("")
+  const [dpi, setDpi] = useState("")
   const [startDate, setStartDate] = useState(today)
   const [durationMonths, setDurationMonths] = useState(6)
   const [monthlyRent, setMonthlyRent] = useState(room.room_type?.price ?? 0)
@@ -83,7 +85,9 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
         contract_id: null,
         name,
         phone,
+        phone_alt: phoneAlt,
         email,
+        dpi,
       })
       if (profileErr) throw profileErr
 
@@ -188,6 +192,22 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
                 required value={phone} onChange={(e) => setPhone(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
                 placeholder="+502 XXXX-XXXX"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono alternativo (opcional)</label>
+              <input
+                value={phoneAlt} onChange={(e) => setPhoneAlt(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                placeholder="+502 XXXX-XXXX"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">DPI</label>
+              <input
+                value={dpi} onChange={(e) => setDpi(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                placeholder="0000 00000 0000"
               />
             </div>
             <div className="col-span-2">

@@ -69,7 +69,9 @@ export interface TenantProfile {
   contract_id: string
   name: string
   phone: string
+  phone_alt: string
   email: string
+  dpi: string
 }
 
 export interface PaymentReceipt {

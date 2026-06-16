@@ -99,7 +99,9 @@ create table tenant_profiles (
   contract_id uuid,
   name        text not null,
   phone       text not null default '',
-  email       text not null default ''  -- copia del email de auth.users (login); se sincroniza vía /api/admin/update-tenant-email
+  phone_alt   text not null default '',  -- teléfono alternativo (para el PDF del contrato)
+  email       text not null default '',  -- copia del email de auth.users (login); se sincroniza vía /api/admin/update-tenant-email
+  dpi         text not null default ''   -- documento personal de identificación (para el PDF del contrato)
 );
 
 -- ── Contracts ──────────────────────────────────────────────

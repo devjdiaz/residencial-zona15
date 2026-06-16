@@ -65,7 +65,9 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
 
   const [name, setName] = useState(tenant?.name ?? "")
   const [phone, setPhone] = useState(tenant?.phone ?? "")
+  const [phoneAlt, setPhoneAlt] = useState(tenant?.phone_alt ?? "")
   const [email, setEmail] = useState(tenant?.email ?? "")
+  const [dpi, setDpi] = useState(tenant?.dpi ?? "")
   const [startDate, setStartDate] = useState(contract.start_date)
   const [durationMonths, setDurationMonths] = useState(contract.duration_months)
   const [paymentDay, setPaymentDay] = useState(contract.payment_day)
@@ -210,7 +212,7 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
 
       // 1. Datos del inquilino (el email ya lo sincronizó la API)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: profileErr } = await (supabase as any).from("tenant_profiles").update({ name, phone }).eq("id", contract.tenant_profile_id)
+      const { error: profileErr } = await (supabase as any).from("tenant_profiles").update({ name, phone, phone_alt: phoneAlt, dpi }).eq("id", contract.tenant_profile_id)
       if (profileErr) throw profileErr
 
       // 2. Datos del contrato
@@ -307,6 +309,14 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">WhatsApp / Teléfono</label>
                 <input required value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="+502 XXXX-XXXX" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono alternativo (opcional)</label>
+                <input value={phoneAlt} onChange={(e) => setPhoneAlt(e.target.value)} className={inputCls} placeholder="+502 XXXX-XXXX" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">DPI</label>
+                <input value={dpi} onChange={(e) => setDpi(e.target.value)} className={inputCls} placeholder="0000 00000 0000" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de inicio</label>
@@ -457,6 +467,14 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
               <div className="flex justify-between">
                 <span className="text-gray-500">Teléfono</span>
                 <span className="font-medium text-gray-900">{tenant?.phone ?? "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Teléfono alt.</span>
+                <span className="font-medium text-gray-900">{tenant?.phone_alt || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">DPI</span>
+                <span className="font-medium text-gray-900">{tenant?.dpi || "—"}</span>
               </div>
             </div>
 

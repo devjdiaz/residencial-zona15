@@ -39,3 +39,6 @@ Con el `require()` removido, TypeScript dejó de tipar `renderToBuffer` como `an
 
 ## Pendiente — 3 contratos sin `monthly_rent` tras el backfill
 Cuartos **4, 5 y 6 de El Maestro** no tienen `type_id` asignado (nunca se les puso tipo de habitación), así que el backfill no pudo congelarles un precio — quedaron en `null`, lo que hoy evalúa a Q0 en la app. Son contratos **activos** (vigentes hasta 2026-12-05). Acción: el cliente debe asignarles tipo desde el backoffice (`RoomGrid` ya tiene el dropdown), y luego correr de nuevo el `update` del backfill solo para esos.
+
+## DPI y teléfono alterno del inquilino (2026-06-15)
+El componente `ContractPDF.tsx` ya esperaba `tenantDpi`/`tenantPhoneAlt` desde que se creó, pero la ruta del PDF los mandaba siempre como `""` (no existían en `tenant_profiles`) — el contrato salía con esas líneas en blanco. Se agregó `tenant_profiles.dpi` y `tenant_profiles.phone_alt` (migración `2026-06-15_tenant-dpi-phone-alt.sql`, columnas `text not null default ''`), con campos editables en `ContractDialog` (crear) y `ContractInfoDialog` (ver/editar, para completar contratos ya existentes). La ruta del PDF ahora los lee de la tabla en vez de hardcodearlos. Probado E2E por el cliente, PDF sale completo.

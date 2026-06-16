@@ -22,7 +22,7 @@ export async function GET(
     .from("contracts")
     .select(`
       id, start_date, end_date, duration_months, payment_day, status, monthly_rent,
-      tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(name, email, phone),
+      tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(name, email, phone, phone_alt, dpi),
       room:rooms(identifier, room_type:room_types(price), property:properties(name, slug))
     `)
     .eq("id", contractId)
@@ -40,9 +40,9 @@ export async function GET(
   const pdfElement = createElement(ContractPDF, {
     contractId,
     tenantName:      tenant?.name        ?? "",
-    tenantDpi:       "",
+    tenantDpi:       tenant?.dpi         ?? "",
     tenantPhone:     tenant?.phone       ?? "",
-    tenantPhoneAlt:  "",
+    tenantPhoneAlt:  tenant?.phone_alt   ?? "",
     tenantEmail:     tenant?.email       ?? "",
     roomIdentifier:  room?.identifier    ?? "",
     propertyName:    prop?.name          ?? "",
