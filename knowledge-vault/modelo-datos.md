@@ -19,7 +19,7 @@ Volver a [[00-Indice]]. Fuente: `supabase/schema.sql` + migraciones en `supabase
 | `rooms` | cuartos por propiedad, estado | lectura pública + admin todo |
 | `room_photos` | fotos de cuartos (path en storage) | lectura pública + admin escribe |
 | `tenant_profiles` | perfil inquilino (FK a `auth.users`); `email` es **copia** del de `auth.users` para mostrarlo en backoffice | dueño lee + admin todo |
-| `contracts` | contrato: fechas, día de pago, estado, `signed_at` (contrato firmado recibido), `contract_file_path` (archivo firmado en bucket `contracts`), `monthly_rent` (renta negociada; null = precio de lista del tipo) | dueño lee + admin todo |
+| `contracts` | contrato: fechas, día de pago, estado, `signed_at` (contrato firmado recibido), `contract_file_path` (archivo firmado en bucket `contracts`), `monthly_rent` (renta negociada; null = precio de lista del tipo), `has_additional_person`/`additional_person_*` (persona adicional autorizada — sin cuenta propia, solo dato para el PDF), `has_parking`/`parking_vehicle_*` (vehículo autorizado en el parqueo) | dueño lee + admin todo |
 | `payment_receipts` | recibos mensuales, hash, rechazo, verificación | dueño CRUD propio + admin todo |
 | `expenses` | gastos por propiedad/compartidos | admin todo |
 | `income_extras` | cargos únicos (depósito, firma, persona extra, parqueo) | admin todo + dueño lee |
@@ -51,6 +51,8 @@ Usada por las policies del bucket `room-photos`. El porqué: [[2026-06-08-rls-fo
 - `2026-06-12_monthly-rent.sql` — `contracts.monthly_rent` (renta negociada por contrato) con backfill del precio de lista a los contratos existentes. Idempotente. Ver [[renta-por-contrato]].
 - `2026-06-15_remove-contract-template-bucket.sql` — quita las policies de `contract-templates` (el bucket y sus objetos se borraron por la Storage API, no por SQL). Ver [[2026-06-15]].
 - `2026-06-15_tenant-dpi-phone-alt.sql` — `tenant_profiles.dpi` y `tenant_profiles.phone_alt` (text, default `''`), para que el PDF del contrato salga completo. Ver [[renta-por-contrato]].
+- `2026-06-16_contract-additional-person.sql` — `contracts.has_additional_person` (boolean) y `contracts.additional_person_name/dpi/phone/phone_alt` (text, default `''`). Datos de la persona adicional autorizada para el PDF; vive en `contracts` (no en `tenant_profiles`) porque nunca tiene cuenta de login — solo el inquilino principal accede a la plataforma. Reutiliza el checkbox existente "Persona adicional (mensual)" de `ContractDialog`/`ContractInfoDialog`. Ver [[reforma-contrato-2026-06]].
+- `2026-06-16_contract-parking-vehicle.sql` — `contracts.has_parking` (boolean) y `contracts.parking_vehicle_type/brand/line/color/plate` (text, default `''`; `parking_vehicle_type` con `check` limitado a `''`/`moto`/`carro`). Datos del vehículo autorizado en el parqueo para el PDF; reutiliza el checkbox existente "Parqueo (mensual)". Ver [[reforma-contrato-2026-06]].
 
 > [!info] Sincronización del email
 > La fuente de verdad del email sigue siendo `auth.users` (credencial de login). `tenant_profiles.email` es una copia para la UI. La **única** vía de escritura es `/api/admin/update-tenant-email` (actualiza ambos con service client). Si se desincroniza, re-ejecutar el backfill de la migración.
