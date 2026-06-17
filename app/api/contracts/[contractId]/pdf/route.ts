@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
-import ContractPDF from "@/components/ContractPDF"
+import ContractPDF, { replacePlaceholders } from "@/components/ContractPDF"
+import type { PmNode, Vars } from "@/components/ContractPDF"
 import { createElement } from "react"
 import { createServiceClient } from "@/lib/supabase/server"
 
-// Supabase puede devolver relaciones embebidas como objeto o como array de un elemento.
 function unwrap<T>(v: T | T[] | null | undefined): T | null {
   if (v == null) return null
   return Array.isArray(v) ? (v[0] ?? null) : v
+}
+
+function fmt(isoDate: string) {
+  const [y, m, d] = isoDate.split("-")
+  const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+  return `${parseInt(d)} de ${months[parseInt(m)-1]} de ${y}`
 }
 
 export async function GET(
@@ -40,43 +46,77 @@ export async function GET(
   const room     = unwrap(contract.room)
   const prop     = unwrap(room?.property)
   const roomType = unwrap(room?.room_type)
+  const propSlug = prop?.slug ?? "maestro"
 
+  // Depósito
   const { data: depositRows } = await sb
     .from("income_extras")
     .select("amount")
     .eq("contract_id", contractId)
     .eq("type", "deposit")
-  const depositPaid = (depositRows?.length ?? 0) > 0
+  const depositPaid   = (depositRows?.length ?? 0) > 0
   const depositAmount = depositPaid ? Number(depositRows![0].amount) : 0
+
+  // Template desde DB
+  const { data: templateRows } = await sb.from("contract_template").select("key, value")
+  const tpl = Object.fromEntries((templateRows ?? []).map((r) => [r.key, r.value]))
+
+  const landlord = (tpl.landlord as { name?: string; dpi?: string; signature_name?: string }) ?? {}
+  const banks    = (tpl.banks    as Record<string, { bank: string; account: string; holder: string; type: string }>) ?? {}
+  const bank     = banks[propSlug] ?? banks["maestro"] ?? { bank: "", account: "", holder: "", type: "" }
+  const bodyJson = (tpl.body_json as PmNode | null) ?? null
+
+  // Cláusula de depósito dinámica
+  const clausulaDeposito = depositPaid
+    ? `DEPÓSITO: El arrendatario entregó un depósito de garantía por la cantidad de Q${depositAmount.toLocaleString("es-GT")}, reembolsable al término del contrato, sujeto al estado del inmueble y al cumplimiento de las obligaciones contraídas.`
+    : "DEPÓSITO: El arrendatario no entregó depósito de garantía al inicio del presente contrato."
+
+  // Variables para sustituir en el body_json
+  const today = new Date().toISOString().split("T")[0]
+  const vars: Vars = {
+    "{FECHA_HOY}":          fmt(today),
+    "{NOMBRE_ARRENDADORA}": landlord.name             ?? "",
+    "{DPI_ARRENDADORA}":    landlord.dpi              ?? "",
+    "{FIRMA_ARRENDADORA}":  landlord.signature_name   ?? "",
+    "{NOMBRE_INQUILINO}":   tenant?.name              ?? "",
+    "{DPI_INQUILINO}":      tenant?.dpi               ?? "",
+    "{TELEFONO_INQUILINO}": tenant?.phone             ?? "",
+    "{TEL_ALT_INQUILINO}":  tenant?.phone_alt         ?? "",
+    "{EMAIL_INQUILINO}":    tenant?.email             ?? "",
+    "{HABITACION}":         room?.identifier          ?? "",
+    "{PROPIEDAD}":          prop?.name                ?? "",
+    "{FECHA_INICIO}":       fmt(contract.start_date),
+    "{FECHA_FIN}":          contract.end_date ? fmt(contract.end_date) : "",
+    "{DURACION_MESES}":     String(contract.duration_months ?? 6),
+    "{RENTA}":              (contract.monthly_rent ?? roomType?.price ?? 0).toLocaleString("es-GT"),
+    "{DIA_PAGO}":           String(contract.payment_day),
+    "{BANCO}":              bank.bank,
+    "{NUM_CUENTA}":         bank.account,
+    "{TITULAR_CUENTA}":     bank.holder,
+    "{TIPO_CUENTA}":        bank.type,
+    "{CLAUSULA_DEPOSITO}":  clausulaDeposito,
+  }
+
+  // Reemplazar placeholders en el cuerpo
+  const filledBody = bodyJson ? replacePlaceholders(bodyJson, vars) : null
 
   const pdfElement = createElement(ContractPDF, {
     contractId,
-    tenantName:      tenant?.name        ?? "",
-    tenantDpi:       tenant?.dpi         ?? "",
-    tenantPhone:     tenant?.phone       ?? "",
-    tenantPhoneAlt:  tenant?.phone_alt   ?? "",
-    tenantEmail:     tenant?.email       ?? "",
-    roomIdentifier:  room?.identifier    ?? "",
-    propertyName:    prop?.name          ?? "",
-    propertySlug:    prop?.slug          ?? "maestro",
-    startDate:       contract.start_date,
-    endDate:         contract.end_date   ?? "",
-    durationMonths:  contract.duration_months ?? 6,
-    paymentDay:      contract.payment_day,
-    monthlyPrice:    contract.monthly_rent ?? roomType?.price ?? 0,
-    depositPaid,
-    depositAmount,
+    bodyJson: filledBody,
+    landlordSignatureName:    landlord.signature_name   ?? "",
+    landlordDpi:              landlord.dpi              ?? "",
+    propertyName:             prop?.name                ?? "",
     hasAdditionalPerson:      contract.has_additional_person ?? false,
     additionalPersonName:     contract.additional_person_name ?? "",
     additionalPersonDpi:      contract.additional_person_dpi ?? "",
     additionalPersonPhone:    contract.additional_person_phone ?? "",
     additionalPersonPhoneAlt: contract.additional_person_phone_alt ?? "",
-    hasParking:          contract.has_parking ?? false,
-    parkingVehicleType:  contract.parking_vehicle_type ?? "",
-    parkingVehicleBrand: contract.parking_vehicle_brand ?? "",
-    parkingVehicleLine:  contract.parking_vehicle_line ?? "",
-    parkingVehicleColor: contract.parking_vehicle_color ?? "",
-    parkingVehiclePlate: contract.parking_vehicle_plate ?? "",
+    hasParking:               contract.has_parking ?? false,
+    parkingVehicleType:       contract.parking_vehicle_type ?? "",
+    parkingVehicleBrand:      contract.parking_vehicle_brand ?? "",
+    parkingVehicleLine:       contract.parking_vehicle_line ?? "",
+    parkingVehicleColor:      contract.parking_vehicle_color ?? "",
+    parkingVehiclePlate:      contract.parking_vehicle_plate ?? "",
   })
 
   const { renderToBuffer } = await import("@react-pdf/renderer")

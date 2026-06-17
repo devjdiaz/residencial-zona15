@@ -4,6 +4,7 @@ import type { Contract, TenantProfile } from "@/lib/supabase/types"
 import { logAudit } from "@/lib/audit"
 import { waLink, tenantPortalUrl } from "@/lib/whatsapp"
 import ContractFileManager from "./ContractFileManager"
+import ContractPDFViewer from "./ContractPDFViewer"
 
 interface Props {
   contract: Contract & { tenant_profile?: TenantProfile }
@@ -57,6 +58,7 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
   const [signedAt, setSignedAt] = useState<string | null>(contract.signed_at ?? null)
   const [togglingSigned, setTogglingSigned] = useState(false)
   const [sendingCreds, setSendingCreds] = useState(false)
+  const [showPdfViewer, setShowPdfViewer] = useState(false)
 
   // ── Edit mode ──────────────────────────────────────────────
   const [editing, setEditing] = useState(false)
@@ -334,6 +336,7 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
   const inputCls = "w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div>
@@ -696,6 +699,13 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
               </button>
             )}
 
+            <button
+              onClick={() => setShowPdfViewer(true)}
+              className="block w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 text-center hover:bg-gray-50 transition-colors"
+            >
+              Ver PDF del contrato
+            </button>
+
             <div className="flex gap-2">
               <button onClick={onClose}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
@@ -717,5 +727,14 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
         )}
       </div>
     </div>
+
+    {showPdfViewer && (
+      <ContractPDFViewer
+        contractId={contract.id}
+        roomIdentifier={roomIdentifier}
+        onClose={() => setShowPdfViewer(false)}
+      />
+    )}
+    </>
   )
 }

@@ -128,3 +128,54 @@
     @apply font-sans;
   }
 }
+
+/* TipTap contract editor */
+.tiptap-contract {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #1a1a1a;
+  outline: none;
+  min-height: 400px;
+}
+.tiptap-contract h1 {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  margin: 12px 0 4px;
+}
+.tiptap-contract h2 {
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  margin: 14px 0 4px;
+}
+.tiptap-contract h3 {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 10px 0 2px;
+}
+.tiptap-contract p {
+  margin: 0 0 6px;
+}
+.tiptap-contract ul,
+.tiptap-contract ol {
+  padding-left: 20px;
+  margin: 0 0 6px;
+}
+.tiptap-contract li {
+  margin-bottom: 3px;
+}
+.tiptap-contract strong {
+  font-weight: 700;
+}
+.tiptap-contract em {
+  font-style: italic;
+}
+.tiptap-contract p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #aaa;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
