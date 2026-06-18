@@ -155,6 +155,19 @@ export interface IssueReport {
   resolved_at: string | null
 }
 
+export interface MonthlyPayment {
+  id: string
+  contract_id: string
+  room_id: string
+  period_month: string
+  amount: number
+  source: "receipt" | "manual"
+  receipt_id: string | null
+  registered_by: string | null
+  registered_at: string
+  notes: string | null
+}
+
 export interface Database {
   public: {
     Tables: {

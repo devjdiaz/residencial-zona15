@@ -5,7 +5,6 @@ import { logAudit } from "@/lib/audit"
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
-// 'YYYY-MM' → 'Junio 2026'
 function periodLabel(period: string) {
   const [year, month] = period.split("-")
   return `${MONTHS[Number(month) - 1] ?? period} ${year}`
@@ -17,22 +16,52 @@ interface Props {
   onClose: () => void
 }
 
-// Registro cronológico de comprobantes del contrato activo, con la
-// verificación (Ver/Aceptar/Rechazar) que antes vivía en Finanzas.
 export default function ReceiptsDialog({ contract, roomIdentifier, onClose }: Props) {
   const [receipts, setReceipts] = useState<PaymentReceipt[]>([])
   const [loading, setLoading] = useState(true)
+  const [recurringCharges, setRecurringCharges] = useState<{ amount: number }[]>([])
+  const [duplicateWarnings, setDuplicateWarnings] = useState<
+    Record<string, { tenantName: string; periodMonth: string }[]>
+  >({})
 
   useEffect(() => {
     async function load() {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
+
+      // Comprobantes de este contrato
       const { data } = await supabase
         .from("payment_receipts")
         .select("*")
         .eq("contract_id", contract.id)
         .order("period_month", { ascending: false })
       setReceipts(data ?? [])
+
+      // Cargos recurrentes (para calcular monto al aprobar)
+      const { data: rcData } = await supabase
+        .from("recurring_charges")
+        .select("amount")
+        .eq("contract_id", contract.id)
+      setRecurringCharges(rcData ?? [])
+
+      // Detección de comprobantes duplicados entre todos los inquilinos
+      const hashes = (data ?? []).map((r) => r.file_hash).filter(Boolean) as string[]
+      if (hashes.length > 0) {
+        const { data: dupes } = await supabase
+          .from("payment_receipts")
+          .select("file_hash, period_month, tenant_profile:tenant_profiles!payment_receipts_tenant_profile_id_fkey(name)")
+          .in("file_hash", hashes)
+          .neq("contract_id", contract.id)
+        const warnings: Record<string, { tenantName: string; periodMonth: string }[]> = {}
+        for (const d of dupes ?? []) {
+          const hash = d.file_hash as string
+          const name = (d.tenant_profile as { name?: string } | null)?.name ?? "Desconocido"
+          if (!warnings[hash]) warnings[hash] = []
+          warnings[hash].push({ tenantName: name, periodMonth: d.period_month })
+        }
+        setDuplicateWarnings(warnings)
+      }
+
       setLoading(false)
     }
     load()
@@ -49,14 +78,42 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose }: Pr
   async function verifyReceipt(receipt: PaymentReceipt) {
     const { createClient } = await import("@/lib/supabase/client")
     const supabase = createClient()
-    await supabase.from("payment_receipts").update({ verified: true, rejected: false, rejection_reason: null }).eq("id", receipt.id)
-    setReceipts((prev) => prev.map((r) => r.id === receipt.id ? { ...r, verified: true, rejected: false, rejection_reason: null } : r))
-    logAudit(`Aceptó comprobante — Hab. ${roomIdentifier} · ${receipt.period_month}`, "receipt", roomIdentifier)
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // 1. Marcar comprobante como verificado
+    await supabase.from("payment_receipts")
+      .update({ verified: true, rejected: false, rejection_reason: null })
+      .eq("id", receipt.id)
+
+    // 2. Calcular monto = renta mensual + cargos recurrentes
+    const base = contract.monthly_rent ?? 0
+    const rcTotal = recurringCharges.reduce((s, r) => s + r.amount, 0)
+    const totalAmount = base + rcTotal
+
+    // 3. Registrar el ingreso confirmado en monthly_payments
+    await supabase.from("monthly_payments").upsert({
+      contract_id: contract.id,
+      room_id: contract.room_id,
+      period_month: receipt.period_month,
+      amount: totalAmount,
+      source: "receipt",
+      receipt_id: receipt.id,
+      registered_by: user?.id ?? null,
+      notes: null,
+    }, { onConflict: "contract_id,period_month" })
+
+    setReceipts((prev) => prev.map((r) =>
+      r.id === receipt.id ? { ...r, verified: true, rejected: false, rejection_reason: null } : r
+    ))
+    logAudit(
+      `Aceptó comprobante — Hab. ${roomIdentifier} · ${receipt.period_month} · Q${totalAmount.toLocaleString()}`,
+      "receipt", roomIdentifier
+    )
   }
 
   async function rejectReceipt(receipt: PaymentReceipt) {
     const reason = window.prompt("Motivo del rechazo (opcional):", "")
-    if (reason === null) return // cancelled
+    if (reason === null) return
     const { createClient } = await import("@/lib/supabase/client")
     const supabase = createClient()
     await supabase.from("payment_receipts")
@@ -95,6 +152,19 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose }: Pr
                       subido el {new Date(r.uploaded_at).toLocaleDateString("es-GT")}
                     </span>
                   </div>
+
+                  {/* Alerta de fraude — archivo duplicado entre inquilinos */}
+                  {r.file_hash && (duplicateWarnings[r.file_hash]?.length ?? 0) > 0 && (
+                    <div className="mt-1.5 px-2.5 py-1.5 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-xs font-semibold text-red-700">⚠️ Archivo duplicado detectado:</p>
+                      {duplicateWarnings[r.file_hash].map((w, i) => (
+                        <p key={i} className="text-xs text-red-600">
+                          {w.tenantName} · {periodLabel(w.periodMonth)}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
                   {r.rejected && r.rejection_reason && (
                     <p className="text-xs text-red-500 mt-0.5">Motivo: {r.rejection_reason}</p>
                   )}
