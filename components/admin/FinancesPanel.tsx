@@ -21,8 +21,8 @@ const EXPENSE_LABELS: Record<string, string> = {
 }
 
 interface Summary {
-  fixedIncome: number
-  recurringIncome: number
+  cobrado: number
+  porCobrar: number
   variableIncome: number
   fixedExpenses: number
   variableExpenses: number
@@ -32,19 +32,24 @@ interface Summary {
 export default function FinancesPanel() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth()) // 0-indexed
+  const [month, setMonth] = useState(now.getMonth())
   const [propertyId, setPropertyId] = useState<string>("")
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [incomeExtras, setIncomeExtras] = useState<IncomeExtra[]>([])
-  const [recurringCharges, setRecurringCharges] = useState<{ id: string; type: string; amount: number; room_id: string }[]>([])
+  const [recurringCharges, setRecurringCharges] = useState<{ id: string; type: string; amount: number; room_id: string; contract_id: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [contracts, setContracts] = useState<(Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[]>([])
+  const [monthlyPayments, setMonthlyPayments] = useState<{ contract_id: string; amount: number; source: string }[]>([])
+
   const [addExpense, setAddExpense] = useState(false)
   const [newExpense, setNewExpense] = useState({ category: "electricity", amount: "", notes: "" })
   const [addIncome, setAddIncome] = useState(false)
   const [newIncome, setNewIncome] = useState({ type: "additional_person", amount: "", contractId: "", notes: "" })
+  const [addMonthlyIncome, setAddMonthlyIncome] = useState(false)
+  const [newMonthlyIncome, setNewMonthlyIncome] = useState({ contractId: "", amount: "", notes: "" })
+  const [monthlyIncomeConflict, setMonthlyIncomeConflict] = useState<string | null>(null)
 
   const period = `${year}-${String(month + 1).padStart(2, "0")}`
   const notConfigured = !process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -68,42 +73,35 @@ export default function FinancesPanel() {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
 
-      // Get room IDs for this property first
       const { data: propertyRooms } = await supabase
         .from("rooms")
         .select("id")
         .eq("property_id", propertyId)
       const propertyRoomIds = (propertyRooms ?? []).map((r) => r.id)
 
-      // Active contracts for this property this month
-      const { data: contracts } = await supabase
+      const { data: contractsData } = await supabase
         .from("contracts")
         .select("*, tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(*), room:rooms(identifier, property_id, room_type:room_types(price))")
         .in("room_id", propertyRoomIds.length ? propertyRoomIds : ["none"])
         .eq("status", "active") as { data: (Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[] | null }
 
-      setContracts(contracts ?? [])
-      const activeContractIds = (contracts ?? []).map((c) => c.id)
-      const fixedIncome = (contracts ?? []).reduce((sum, c) => sum + (c.monthly_rent ?? c.room?.room_type?.price ?? 0), 0)
+      setContracts(contractsData ?? [])
+      const activeContractIds = (contractsData ?? []).map((c) => c.id)
 
-      // Recurring charges (monthly) for active contracts
       const { data: recurring } = await supabase
         .from("recurring_charges")
         .select("id, type, amount, room_id, contract_id")
         .in("contract_id", activeContractIds.length ? activeContractIds : ["none"])
       setRecurringCharges(recurring ?? [])
-      const recurringIncome = (recurring ?? []).reduce((sum, r) => sum + r.amount, 0)
 
-      // Income extras (one-time) this period
       const { data: extras } = await supabase
         .from("income_extras")
         .select("*")
-        .in("room_id", (contracts ?? []).map((c) => c.room_id))
+        .in("room_id", (contractsData ?? []).map((c) => c.room_id))
         .like("date", `${period}%`)
       setIncomeExtras(extras ?? [])
       const variableIncome = (extras ?? []).reduce((sum, e) => sum + e.amount, 0)
 
-      // Expenses this period
       const { data: exp } = await supabase
         .from("expenses")
         .select("*")
@@ -111,11 +109,29 @@ export default function FinancesPanel() {
         .eq("period", period)
       setExpenses(exp ?? [])
 
+      // Ingresos reales confirmados este período
+      const { data: payments } = await supabase
+        .from("monthly_payments")
+        .select("contract_id, amount, source")
+        .in("contract_id", activeContractIds.length ? activeContractIds : ["none"])
+        .eq("period_month", period)
+      setMonthlyPayments(payments ?? [])
+
+      const cobrado = (payments ?? []).reduce((sum, p) => sum + p.amount, 0)
+
+      const paidIds = new Set((payments ?? []).map((p) => p.contract_id))
+      const porCobrar = (contractsData ?? []).reduce((sum, c) => {
+        if (paidIds.has(c.id)) return sum
+        const base = c.monthly_rent ?? c.room?.room_type?.price ?? 0
+        const rc = (recurring ?? []).filter((r) => r.contract_id === c.id).reduce((s, r) => s + r.amount, 0)
+        return sum + base + rc
+      }, 0)
+
       const fixedExpenses = (exp ?? []).filter((e) => e.type === "fixed").reduce((sum, e) => sum + (e.property_id ? e.amount : e.amount / 2), 0)
       const variableExpenses = (exp ?? []).filter((e) => e.type === "variable").reduce((sum, e) => sum + e.amount, 0)
       const commissions = (exp ?? []).filter((e) => e.category === "commission").reduce((sum, e) => sum + e.amount, 0)
 
-      setSummary({ fixedIncome, recurringIncome, variableIncome, fixedExpenses, variableExpenses, commissions })
+      setSummary({ cobrado, porCobrar, variableIncome, fixedExpenses, variableExpenses, commissions })
       setLoading(false)
     }
     load()
@@ -158,7 +174,73 @@ export default function FinancesPanel() {
     setNewIncome({ type: "additional_person", amount: "", contractId: "", notes: "" })
   }
 
-  const totalIncome = (summary?.fixedIncome ?? 0) + (summary?.recurringIncome ?? 0) + (summary?.variableIncome ?? 0)
+  async function saveMonthlyIncome() {
+    if (!newMonthlyIncome.amount || !newMonthlyIncome.contractId) return
+    const contract = contracts.find((c) => c.id === newMonthlyIncome.contractId)
+    if (!contract) return
+    const { createClient } = await import("@/lib/supabase/client")
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // Si ya hay un pago por comprobante aprobado, advertir antes de sobrescribir
+    const existing = monthlyPayments.find((p) => p.contract_id === newMonthlyIncome.contractId)
+    if (existing && !monthlyIncomeConflict) {
+      const { data: existingFull } = await supabase
+        .from("monthly_payments")
+        .select("source")
+        .eq("contract_id", newMonthlyIncome.contractId)
+        .eq("period_month", period)
+        .single()
+      if (existingFull?.source === "receipt") {
+        setMonthlyIncomeConflict(
+          "Ya existe un ingreso aprobado por comprobante para este período. Haz clic en Guardar nuevamente para sobrescribirlo."
+        )
+        return
+      }
+    }
+
+    const amount = Number(newMonthlyIncome.amount)
+    const { error } = await supabase.from("monthly_payments").upsert({
+      contract_id: newMonthlyIncome.contractId,
+      room_id: contract.room_id,
+      period_month: period,
+      amount,
+      source: "manual",
+      receipt_id: null,
+      registered_by: user?.id ?? null,
+      notes: newMonthlyIncome.notes || null,
+    }, { onConflict: "contract_id,period_month" })
+
+    if (error) { alert("Error al registrar el ingreso"); return }
+
+    logAudit(
+      `Registró ingreso manual — Hab. ${contract.room?.identifier} · ${period} · Q${amount.toLocaleString()}`,
+      "monthly_payment", contract.room?.identifier
+    )
+
+    const wasUnpaid = !existing
+    setMonthlyPayments((prev) => [
+      ...prev.filter((p) => p.contract_id !== newMonthlyIncome.contractId),
+      { contract_id: newMonthlyIncome.contractId, amount, source: "manual" },
+    ])
+    setSummary((prev) => {
+      if (!prev) return prev
+      const delta = wasUnpaid ? amount : amount - (existing?.amount ?? 0)
+      const base = contract.monthly_rent ?? contract.room?.room_type?.price ?? 0
+      const rc = recurringCharges.filter((r) => r.contract_id === newMonthlyIncome.contractId).reduce((s, r) => s + r.amount, 0)
+      return {
+        ...prev,
+        cobrado: prev.cobrado + delta,
+        porCobrar: wasUnpaid ? Math.max(0, prev.porCobrar - (base + rc)) : prev.porCobrar,
+      }
+    })
+
+    setAddMonthlyIncome(false)
+    setMonthlyIncomeConflict(null)
+    setNewMonthlyIncome({ contractId: "", amount: "", notes: "" })
+  }
+
+  const totalIncome = (summary?.cobrado ?? 0) + (summary?.variableIncome ?? 0)
   const totalExpenses = (summary?.fixedExpenses ?? 0) + (summary?.variableExpenses ?? 0)
   const net = totalIncome - totalExpenses
 
@@ -168,7 +250,7 @@ export default function FinancesPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
+      {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center">
         <select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}
           className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none">
@@ -185,18 +267,19 @@ export default function FinancesPanel() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />)}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />)}
         </div>
       ) : summary && (
         <>
           {/* KPI cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
-              { label: "Ingresos fijos", value: summary.fixedIncome + summary.recurringIncome, color: "text-green-700" },
+              { label: "Cobrado",            value: summary.cobrado,        color: "text-green-700" },
+              { label: "Por cobrar",         value: summary.porCobrar,      color: "text-amber-600" },
               { label: "Ingresos variables", value: summary.variableIncome, color: "text-green-600" },
-              { label: "Total egresos", value: totalExpenses, color: "text-red-600" },
-              { label: "Neto del mes", value: net, color: net >= 0 ? "text-blue-700" : "text-red-700" },
+              { label: "Total egresos",      value: totalExpenses,          color: "text-red-600" },
+              { label: "Neto del mes",       value: net,                    color: net >= 0 ? "text-blue-700" : "text-red-700" },
             ].map((k) => (
               <div key={k.label} className="bg-white rounded-xl border border-gray-100 p-4">
                 <p className="text-xs text-gray-500">{k.label}</p>
@@ -205,11 +288,129 @@ export default function FinancesPanel() {
             ))}
           </div>
 
-          {/* Recurring charges (monthly) */}
+          {/* Estado de cobros por contrato + ingreso manual */}
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-gray-900 text-sm">
+                Estado de cobros — {MONTHS[month]} {year}
+              </h3>
+              <button
+                onClick={() => { setAddMonthlyIncome(!addMonthlyIncome); setMonthlyIncomeConflict(null) }}
+                className="text-xs px-3 py-1.5 rounded-lg bg-[#24577a] text-white hover:bg-[#1d4563] transition-colors"
+              >
+                + Registrar ingreso manual
+              </button>
+            </div>
+
+            {/* Formulario ingreso manual */}
+            {addMonthlyIncome && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-xl space-y-3">
+                {monthlyIncomeConflict && (
+                  <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-xs text-amber-700">{monthlyIncomeConflict}</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Habitación</label>
+                    <select
+                      value={newMonthlyIncome.contractId}
+                      onChange={(e) => {
+                        const c = contracts.find((c) => c.id === e.target.value)
+                        const base = c ? (c.monthly_rent ?? c.room?.room_type?.price ?? 0) : 0
+                        const rc = recurringCharges
+                          .filter((r) => r.contract_id === e.target.value)
+                          .reduce((s, r) => s + r.amount, 0)
+                        setNewMonthlyIncome((p) => ({ ...p, contractId: e.target.value, amount: String(base + rc) }))
+                        setMonthlyIncomeConflict(null)
+                      }}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none"
+                    >
+                      <option value="">— Seleccionar —</option>
+                      {contracts.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          Hab. {c.room?.identifier} · {c.tenant_profile?.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Monto (Q)</label>
+                    <input
+                      type="number"
+                      value={newMonthlyIncome.amount}
+                      onChange={(e) => setNewMonthlyIncome((p) => ({ ...p, amount: e.target.value }))}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Notas (opcional)</label>
+                    <input
+                      type="text"
+                      value={newMonthlyIncome.notes}
+                      onChange={(e) => setNewMonthlyIncome((p) => ({ ...p, notes: e.target.value }))}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none"
+                      placeholder="Ej: efectivo, transferencia #1234"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={saveMonthlyIncome}
+                    className="px-4 py-1.5 rounded-lg bg-[#24577a] text-white text-xs font-medium hover:bg-[#1d4563]"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    onClick={() => { setAddMonthlyIncome(false); setMonthlyIncomeConflict(null) }}
+                    className="px-4 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tabla estado por contrato */}
+            <div className="divide-y divide-gray-50">
+              {contracts.length === 0 ? (
+                <p className="text-xs text-gray-400 py-4 text-center">Sin contratos activos este mes</p>
+              ) : contracts.map((c) => {
+                const payment = monthlyPayments.find((p) => p.contract_id === c.id)
+                const base = c.monthly_rent ?? c.room?.room_type?.price ?? 0
+                const rc = recurringCharges.filter((r) => r.contract_id === c.id).reduce((s, r) => s + r.amount, 0)
+                const expected = base + rc
+                return (
+                  <div key={c.id} className="py-2.5 flex items-center justify-between gap-3">
+                    <div>
+                      <span className="text-sm font-medium text-gray-800">Hab. {c.room?.identifier}</span>
+                      <span className="text-xs text-gray-400 ml-2">{c.tenant_profile?.name}</span>
+                      {payment && (
+                        <span className="text-xs text-gray-400 ml-2">
+                          · {payment.source === "receipt" ? "comprobante" : "manual"}
+                        </span>
+                      )}
+                    </div>
+                    {payment ? (
+                      <span className="text-xs font-medium text-green-700 flex-shrink-0">
+                        ✓ Q{payment.amount.toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-amber-600 flex-shrink-0">
+                        Pendiente Q{expected.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Cargos recurrentes (informativos) */}
           {recurringCharges.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h3 className="font-medium text-gray-900 text-sm mb-3">Cargos recurrentes (mensuales)</h3>
-              {/* Tabla — sm+ */}
               <table className="hidden sm:table w-full text-sm">
                 <thead>
                   <tr className="text-xs text-gray-500 border-b border-gray-100">
@@ -231,7 +432,6 @@ export default function FinancesPanel() {
                   })}
                 </tbody>
               </table>
-              {/* Filas apiladas — móvil */}
               <div className="sm:hidden divide-y divide-gray-50">
                 {recurringCharges.map((rc) => {
                   const c = contracts.find((c) => c.room_id === rc.room_id)
@@ -246,11 +446,11 @@ export default function FinancesPanel() {
                   )
                 })}
               </div>
-              <p className="text-xs text-gray-400 mt-2">Se suman a los ingresos fijos cada mes mientras el contrato esté activo.</p>
+              <p className="text-xs text-gray-400 mt-2">Incluidos en el monto esperado por contrato.</p>
             </div>
           )}
 
-          {/* Income extras */}
+          {/* Ingresos extras (depósitos, firmas, etc.) */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-medium text-gray-900 text-sm">Ingresos extras — {MONTHS[month]} {year}</h3>
@@ -322,7 +522,7 @@ export default function FinancesPanel() {
             )}
           </div>
 
-          {/* Expenses detail */}
+          {/* Egresos */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-medium text-gray-900 text-sm">Egresos — {MONTHS[month]} {year}</h3>
@@ -376,7 +576,6 @@ export default function FinancesPanel() {
               </tbody>
             </table>
           </div>
-
         </>
       )}
     </div>
