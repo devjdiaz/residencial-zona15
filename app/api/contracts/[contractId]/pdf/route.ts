@@ -22,6 +22,10 @@ export async function GET(
   const { contractId } = await params
   if (!contractId) return NextResponse.json({ error: "Missing contractId" }, { status: 400 })
 
+  // ?download=1 fuerza la descarga (attachment) en vez de mostrarlo inline en el iframe.
+  // Útil sobre todo en móvil, donde la barra nativa del visor no siempre ofrece descargar.
+  const forceDownload = _req.nextUrl.searchParams.get("download") === "1"
+
   const sb = await createServiceClient()
 
   const { data: contract, error } = await sb
@@ -122,10 +126,11 @@ export async function GET(
   const { renderToBuffer } = await import("@react-pdf/renderer")
   const buffer: Buffer = await renderToBuffer(pdfElement as Parameters<typeof renderToBuffer>[0])
 
+  const disposition = forceDownload ? "attachment" : "inline"
   return new NextResponse(buffer as unknown as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="contrato-${room?.identifier ?? contractId}.pdf"`,
+      "Content-Disposition": `${disposition}; filename="contrato-${room?.identifier ?? contractId}.pdf"`,
     },
   })
 }

@@ -220,6 +220,14 @@ export default function ContractPDFViewer({ contractId, roomIdentifier, onClose 
               <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                 Cerrar
               </button>
+              <a
+                href={`/api/contracts/${contractId}/pdf?download=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium text-center hover:bg-gray-50 transition-colors"
+              >
+                Descargar
+              </a>
               <button
                 onClick={handleEditClick}
                 disabled={loading}
