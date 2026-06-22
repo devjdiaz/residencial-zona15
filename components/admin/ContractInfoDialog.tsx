@@ -185,6 +185,10 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
   // Genera contraseña nueva (la actual no es recuperable) y abre WhatsApp con las credenciales
   async function sendCredentialsWhatsApp() {
     if (!tenant) return
+    // iOS Safari solo permite abrir WhatsApp durante la activación del gesto (el instante del toque).
+    // Como antes hay que esperar al servidor para resetear la contraseña, abrimos la ventana YA
+    // (síncronamente, dentro del clic) y la redirigimos al link cuando el reset confirma.
+    const waWindow = window.open("", "_blank")
     setSendingCreds(true)
     const pwd = generatePassword()
     try {
@@ -197,9 +201,11 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
       setNewPassword(pwd)
       const msg = `Hola ${tenant.name}, tu contrato quedó registrado. 🏠\nEntra al portal de inquilinos para subir tus comprobantes de pago cada mes:\n${tenantPortalUrl()}\nUsuario: ${tenant.email}\nContraseña: ${pwd}`
       const link = waLink(tenant.phone, msg)
-      if (link) window.open(link, "_blank")
+      if (link && waWindow) waWindow.location.href = link
+      else waWindow?.close()
       logAudit(`Envió credenciales por WhatsApp — Hab. ${roomIdentifier} (${tenant.name})`, "tenant", roomIdentifier)
     } catch {
+      waWindow?.close()
       alert("Error al enviar las credenciales")
     } finally {
       setSendingCreds(false)
