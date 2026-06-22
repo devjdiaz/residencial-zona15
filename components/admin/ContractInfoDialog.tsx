@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"
 import type { Contract, TenantProfile } from "@/lib/supabase/types"
 import { logAudit } from "@/lib/audit"
-import { waLink, tenantPortalUrl } from "@/lib/whatsapp"
+import { waLink, tenantPortalUrl, getContractPdfUrl } from "@/lib/whatsapp"
 import ContractFileManager from "./ContractFileManager"
 import ContractPDFViewer from "./ContractPDFViewer"
 
@@ -204,6 +204,16 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
     } finally {
       setSendingCreds(false)
     }
+  }
+
+  // Reenvía el PDF del contrato por WhatsApp (mismo mensaje que al crearlo).
+  function sendContractWhatsApp() {
+    if (!tenant) return
+    const msg = `Hola ${tenant.name}, ¡bienvenido/a! Descarga tu contrato de arrendamiento aquí:\n${getContractPdfUrl(contract.id)}\nPor favor imprímelo, fírmalo y entrégalo a la administración. ¡Gracias!`
+    const link = waLink(tenant.phone, msg)
+    if (!link) return
+    window.open(link, "_blank")
+    logAudit(`Envió contrato PDF por WhatsApp — Hab. ${roomIdentifier} (${tenant.name})`, "contract", roomIdentifier)
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -705,6 +715,21 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
             >
               Ver PDF del contrato
             </button>
+
+            <div>
+              <button
+                onClick={sendContractWhatsApp}
+                disabled={!tenant || !tenant.phone.replace(/\D/g, "")}
+                className="w-full py-2.5 rounded-xl bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                📄 Enviar contrato por WhatsApp
+              </button>
+              <p className="text-xs text-gray-400 mt-1.5">
+                {tenant?.phone.replace(/\D/g, "")
+                  ? "Abre WhatsApp con el enlace al PDF del contrato para que lo imprima y firme."
+                  : "El inquilino no tiene teléfono registrado."}
+              </p>
+            </div>
 
             <div className="flex gap-2">
               <button onClick={onClose}
