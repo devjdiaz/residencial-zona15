@@ -56,6 +56,7 @@ export interface Contract {
   whatsapp_template: string | null
   status: ContractStatus
   signed_at: string | null
+  credentials_sent_at: string | null
   monthly_rent: number | null
   notes: string | null
   contract_file_path: string | null
@@ -193,9 +194,10 @@ export interface Database {
       }
       contracts: {
         Row: Contract
-        Insert: Omit<Contract, "id" | "room" | "tenant_profile" | "signed_at" | "contract_file_path" | "monthly_rent" | "has_additional_person" | "additional_person_name" | "additional_person_dpi" | "additional_person_phone" | "additional_person_phone_alt" | "has_parking" | "parking_vehicle_type" | "parking_vehicle_brand" | "parking_vehicle_line" | "parking_vehicle_color" | "parking_vehicle_plate"> & {
+        Insert: Omit<Contract, "id" | "room" | "tenant_profile" | "signed_at" | "credentials_sent_at" | "contract_file_path" | "monthly_rent" | "has_additional_person" | "additional_person_name" | "additional_person_dpi" | "additional_person_phone" | "additional_person_phone_alt" | "has_parking" | "parking_vehicle_type" | "parking_vehicle_brand" | "parking_vehicle_line" | "parking_vehicle_color" | "parking_vehicle_plate"> & {
           id?: string
           signed_at?: string | null
+          credentials_sent_at?: string | null
           contract_file_path?: string | null
           monthly_rent?: number | null
           has_additional_person?: boolean

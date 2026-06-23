@@ -186,20 +186,34 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
   async function sendCredentialsWhatsApp() {
     if (!tenant) return
     // iOS Safari solo permite abrir WhatsApp durante la activación del gesto (el instante del toque).
-    // Como antes hay que esperar al servidor para resetear la contraseña, abrimos la ventana YA
-    // (síncronamente, dentro del clic) y la redirigimos al link cuando el reset confirma.
+    // Por eso abrimos la ventana YA (síncronamente, dentro del clic) y la redirigimos después.
     const waWindow = window.open("", "_blank")
     setSendingCreds(true)
-    const pwd = generatePassword()
     try {
-      const res = await fetch("/api/admin/reset-tenant-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenantId: contract.tenant_profile_id, password: pwd }),
-      })
-      if (!res.ok) throw new Error("Error al generar la contraseña")
-      setNewPassword(pwd)
-      const msg = `Hola ${tenant.name}, tu contrato quedó registrado. 🏠\nEntra al portal de inquilinos para subir tus comprobantes de pago cada mes:\n${tenantPortalUrl()}\nUsuario: ${tenant.email}\nContraseña: ${pwd}`
+      // La contraseña solo se genera/resetea en el PRIMER envío. En reenvíos no se toca
+      // (la actual no es recuperable). Si el admin acaba de generar una con 🔑, se reenvía esa.
+      const firstSend = !contract.credentials_sent_at
+      let pwd = newPassword
+      if (!pwd && firstSend) {
+        pwd = generatePassword()
+        const res = await fetch("/api/admin/reset-tenant-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tenantId: contract.tenant_profile_id, password: pwd }),
+        })
+        if (!res.ok) throw new Error("Error al generar la contraseña")
+        setNewPassword(pwd)
+      }
+      if (firstSend) {
+        const { createClient } = await import("@/lib/supabase/client")
+        const supabase = createClient()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("contracts").update({ credentials_sent_at: new Date().toISOString() }).eq("id", contract.id)
+        onUpdated()
+      }
+      const msg = pwd
+        ? `Hola ${tenant.name}, tu contrato quedó registrado. 🏠\nEntra al portal de inquilinos para subir tus comprobantes de pago cada mes:\n${tenantPortalUrl()}\nUsuario: ${tenant.email}\nContraseña: ${pwd}`
+        : `Hola ${tenant.name}, te compartimos tu acceso al portal de inquilinos para subir tus comprobantes de pago:\n${tenantPortalUrl()}\nUsuario: ${tenant.email}\nUsa la contraseña que ya te enviamos. Si la olvidaste, avísanos y te generamos una nueva.`
       const link = waLink(tenant.phone, msg)
       if (link && waWindow) waWindow.location.href = link
       else waWindow?.close()
@@ -679,12 +693,14 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
                     disabled={sendingCreds || !tenant || !tenant.phone.replace(/\D/g, "")}
                     className="w-full py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {sendingCreds ? "Generando…" : "📲 Enviar credenciales por WhatsApp"}
+                    {sendingCreds ? "Enviando…" : "📲 Enviar credenciales por WhatsApp"}
                   </button>
                   <p className="text-xs text-gray-400 mt-1.5">
-                    {tenant?.phone.replace(/\D/g, "")
-                      ? "Genera una contraseña nueva y abre WhatsApp con los datos de acceso al portal."
-                      : "El inquilino no tiene teléfono — usa \"Generar nueva contraseña\" y copia las credenciales."}
+                    {!tenant?.phone.replace(/\D/g, "")
+                      ? "El inquilino no tiene teléfono — usa \"Generar nueva contraseña\" y copia las credenciales."
+                      : contract.credentials_sent_at
+                      ? "Reenvía el acceso al portal por WhatsApp (sin cambiar la contraseña). Para cambiarla, usa \"Generar nueva contraseña\"."
+                      : "Genera la contraseña y abre WhatsApp con los datos de acceso al portal."}
                   </p>
                 </div>
               )}
