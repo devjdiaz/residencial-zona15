@@ -411,3 +411,18 @@ create policy "contracts_admin_update"
 create policy "contracts_admin_delete"
   on storage.objects for delete to authenticated
   using ( bucket_id = 'contracts' and public.current_user_role() in ('super_admin','admin') );
+
+-- Storage policies for receipts (payment + abono receipts): tenant manages own
+-- folder (policies set in dashboard); admin can read (signed URLs) and delete (cleanup).
+drop policy if exists "receipts_admin_read"   on storage.objects;
+drop policy if exists "receipts_admin_delete" on storage.objects;
+
+create policy "receipts_admin_read"
+  on storage.objects for select to authenticated
+  using ( bucket_id = 'receipts' and public.current_user_role() in ('super_admin','admin') );
+
+create policy "receipts_admin_delete"
+  on storage.objects for delete to authenticated
+  using ( bucket_id = 'receipts' and public.current_user_role() in ('super_admin','admin') );
+-- Nota: las policies tenant-scoped del bucket `receipts` (insert/select/update de la
+-- carpeta propia {user.id}/...) viven en el dashboard de Supabase, no versionadas.

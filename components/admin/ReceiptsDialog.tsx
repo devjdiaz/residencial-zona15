@@ -71,7 +71,7 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose }: Pr
     const { createClient } = await import("@/lib/supabase/client")
     const supabase = createClient()
     const { data, error } = await supabase.storage.from("receipts").createSignedUrl(storagePath, 300)
-    if (error || !data) { alert("No se pudo abrir el comprobante"); return }
+    if (error || !data) { console.error("createSignedUrl receipts", error); alert(`No se pudo abrir el comprobante${error ? `: ${error.message}` : ""}`); return }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer")
   }
 

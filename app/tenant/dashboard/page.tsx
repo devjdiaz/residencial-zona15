@@ -346,7 +346,13 @@ export default function TenantDashboard() {
 
       setReceipts((prev) => [rec as Receipt, ...prev.filter((r) => r.period_month !== activePeriod)])
     } catch (err: unknown) {
-      setUploadError(err instanceof Error ? err.message : "Error al subir el comprobante")
+      console.error("handleUpload", err)
+      const msg = err instanceof Error
+        ? err.message
+        : (err && typeof err === "object" && "message" in err)
+          ? String((err as { message: unknown }).message)
+          : "Error al subir el comprobante"
+      setUploadError(msg)
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ""
