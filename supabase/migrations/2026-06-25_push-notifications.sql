@@ -45,3 +45,42 @@ create policy "notifications_admin_all" on notifications
   for all to authenticated
   using ( public.current_user_role() in ('super_admin','admin') )
   with check ( public.current_user_role() in ('super_admin','admin') );
+
+-- =============================================================
+-- Disparo automático: cuando el inquilino crea un evento → POST a /api/notify
+-- (que decide si notificar y manda el Web Push). Usa pg_net (async).
+-- El cuerpo va envuelto en un EXCEPTION que traga cualquier error para que
+-- una falla de notificación NUNCA bloquee el insert del inquilino.
+-- Reemplazar __NOTIFY_WEBHOOK_SECRET__ por el valor real (no versionado).
+-- =============================================================
+create extension if not exists pg_net;
+
+create or replace function public.notify_admin_event()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  begin
+    perform net.http_post(
+      url := 'https://residencial-zona15.vercel.app/api/notify',
+      headers := jsonb_build_object('Content-Type', 'application/json', 'x-webhook-secret', '__NOTIFY_WEBHOOK_SECRET__'),
+      body := jsonb_build_object('type', TG_OP, 'table', TG_TABLE_NAME, 'record', to_jsonb(NEW))
+    );
+  exception when others then
+    null; -- nunca bloquear el insert por un fallo de notificación
+  end;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists trg_notify_receipt    on payment_receipts;
+drop trigger if exists trg_notify_abono_req  on abono_requests;
+drop trigger if exists trg_notify_abono_pay  on abono_payments;
+drop trigger if exists trg_notify_issue      on issue_reports;
+
+create trigger trg_notify_receipt   after insert or update on payment_receipts for each row execute function public.notify_admin_event();
+create trigger trg_notify_abono_req after insert            on abono_requests   for each row execute function public.notify_admin_event();
+create trigger trg_notify_abono_pay after insert            on abono_payments   for each row execute function public.notify_admin_event();
+create trigger trg_notify_issue     after insert            on issue_reports    for each row execute function public.notify_admin_event();
