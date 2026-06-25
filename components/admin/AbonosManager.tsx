@@ -69,7 +69,8 @@ export default function AbonosManager({ roomId }: { roomId?: string } = {}) {
     const { data: { user } } = await sb.auth.getUser()
     const full = { ...patch, resolved_at: new Date().toISOString(), resolved_by: user?.id ?? null }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (sb as any).from("abono_requests").update(full).eq("id", r.id)
+    const { error } = await (sb as any).from("abono_requests").update(full).eq("id", r.id)
+    if (error) { console.error("abono_requests update", error); alert(`Error: ${error.message}${error.code ? ` [${error.code}]` : ""}`); return }
     setRequests((p) => p.map((x) => x.id === r.id ? { ...x, ...full } : x))
     logAudit(`${auditMsg} — Hab. ${r.room?.identifier ?? ""} · ${r.period_month}`, "abono", r.room?.identifier)
   }
@@ -143,11 +144,12 @@ export default function AbonosManager({ roomId }: { roomId?: string } = {}) {
       registered_by: user?.id ?? null,
       notes: "Pago por abonos",
     }, { onConflict: "contract_id,period_month" })
-    if (payErr) { alert("Error al registrar el abono en el ledger"); return }
+    if (payErr) { console.error("monthly_payments upsert", payErr); alert(`Error al registrar el abono: ${payErr.message}${payErr.code ? ` [${payErr.code}]` : ""}`); return }
 
-    await sb.from("abono_payments")
+    const { error: apErr } = await sb.from("abono_payments")
       .update({ verified: true, rejected: false, rejection_reason: null, registered_by: user?.id ?? null })
       .eq("id", ap.id)
+    if (apErr) { console.error("abono_payments update", apErr); alert(`Error al marcar verificado: ${apErr.message}${apErr.code ? ` [${apErr.code}]` : ""}`); return }
     setPayments((p) => p.map((x) => x.id === ap.id ? { ...x, verified: true, rejected: false, rejection_reason: null } : x))
     logAudit(`Verificó abono Q${ap.amount.toLocaleString()} — Hab. ${r.room?.identifier ?? ""} · ${ap.period_month} (acumulado Q${newTotal.toLocaleString()})`, "abono", r.room?.identifier)
   }

@@ -309,7 +309,7 @@ export default function FinancesPanel() {
         reason: waiveForm.reason || null,
         created_by: user?.id ?? null,
       }).select().single()
-      if (error) { alert("Error al condonar el cobro"); setWaiveBusy(false); return }
+      if (error) { console.error("charge_waivers insert", error); alert(`Error al condonar: ${error.message}${error.code ? ` [${error.code}]` : ""}${error.details ? ` — ${error.details}` : ""}${error.hint ? ` (${error.hint})` : ""}`); setWaiveBusy(false); return }
 
       logAudit(
         `Condonó ${opt.label.toLowerCase()} Q${amount.toLocaleString()} — Hab. ${waiveContract.room?.identifier} · ${period}${waiveForm.reason ? ` (${waiveForm.reason})` : ""}`,
@@ -333,7 +333,7 @@ export default function FinancesPanel() {
     const { createClient } = await import("@/lib/supabase/client")
     const supabase = createClient()
     const { error } = await supabase.from("charge_waivers").delete().eq("id", w.id)
-    if (error) { alert("Error al quitar la condonación"); return }
+    if (error) { console.error("charge_waivers delete", error); alert(`Error al quitar la condonación: ${error.message}${error.code ? ` [${error.code}]` : ""}`); return }
     logAudit(`Quitó condonación de Q${w.amount.toLocaleString()} — ${w.period_month}`, "waiver")
     setWaivers((prev) => prev.filter((x) => x.id !== w.id))
     if (w.concept === "rent" || w.recurring_charge_id) {
