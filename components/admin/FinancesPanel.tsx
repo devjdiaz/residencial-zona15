@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
-import type { Contract, Expense, IncomeExtra, TenantProfile } from "@/lib/supabase/types"
+import type { ChargeWaiver, Contract, Expense, IncomeExtra, TenantProfile, WaiverConcept } from "@/lib/supabase/types"
 import { logAudit } from "@/lib/audit"
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
@@ -42,6 +42,12 @@ export default function FinancesPanel() {
   const [loading, setLoading] = useState(false)
   const [contracts, setContracts] = useState<(Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[]>([])
   const [monthlyPayments, setMonthlyPayments] = useState<{ contract_id: string; amount: number; source: string }[]>([])
+  const [waivers, setWaivers] = useState<ChargeWaiver[]>([])
+
+  // Diálogo de condonación
+  const [waiveContract, setWaiveContract] = useState<(Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile }) | null>(null)
+  const [waiveForm, setWaiveForm] = useState<{ target: string; amount: string; reason: string }>({ target: "", amount: "", reason: "" })
+  const [waiveBusy, setWaiveBusy] = useState(false)
 
   const [addExpense, setAddExpense] = useState(false)
   const [newExpense, setNewExpense] = useState({ category: "electricity", amount: "", notes: "" })
@@ -117,14 +123,26 @@ export default function FinancesPanel() {
         .eq("period_month", period)
       setMonthlyPayments(payments ?? [])
 
+      // Condonaciones de este período
+      const { data: waiverRows } = await supabase
+        .from("charge_waivers")
+        .select("*")
+        .in("contract_id", activeContractIds.length ? activeContractIds : ["none"])
+        .eq("period_month", period)
+      setWaivers((waiverRows as ChargeWaiver[]) ?? [])
+
       const cobrado = (payments ?? []).reduce((sum, p) => sum + p.amount, 0)
 
-      const paidIds = new Set((payments ?? []).map((p) => p.contract_id))
+      // Por cobrar: por contrato, resta condonaciones (renta/recurrentes) y lo ya pagado en el ledger
       const porCobrar = (contractsData ?? []).reduce((sum, c) => {
-        if (paidIds.has(c.id)) return sum
         const base = c.monthly_rent ?? c.room?.room_type?.price ?? 0
         const rc = (recurring ?? []).filter((r) => r.contract_id === c.id).reduce((s, r) => s + r.amount, 0)
-        return sum + base + rc
+        const waivedExpected = ((waiverRows as ChargeWaiver[]) ?? [])
+          .filter((w) => w.contract_id === c.id && (w.concept === "rent" || w.recurring_charge_id))
+          .reduce((s, w) => s + w.amount, 0)
+        const expectedNeto = Math.max(0, base + rc - waivedExpected)
+        const pagado = (payments ?? []).filter((p) => p.contract_id === c.id).reduce((s, p) => s + p.amount, 0)
+        return sum + Math.max(0, expectedNeto - pagado)
       }, 0)
 
       const fixedExpenses = (exp ?? []).filter((e) => e.type === "fixed").reduce((sum, e) => sum + (e.property_id ? e.amount : e.amount / 2), 0)
@@ -238,6 +256,89 @@ export default function FinancesPanel() {
     setAddMonthlyIncome(false)
     setMonthlyIncomeConflict(null)
     setNewMonthlyIncome({ contractId: "", amount: "", notes: "" })
+  }
+
+  // Opciones condonables de un contrato en el período seleccionado
+  function waiveTargets(c: Contract & { room: { room_type?: { price: number } } }) {
+    const base = c.monthly_rent ?? c.room?.room_type?.price ?? 0
+    const opts: { value: string; label: string; amount: number; concept: WaiverConcept; recurringId?: string; extraId?: string }[] = [
+      { value: "rent", label: `Renta del mes`, amount: base, concept: "rent" },
+    ]
+    recurringCharges.filter((r) => r.contract_id === c.id).forEach((r) => {
+      opts.push({ value: `recurring:${r.id}`, label: `${INCOME_LABELS[r.type] ?? r.type} (recurrente)`, amount: r.amount, concept: r.type as WaiverConcept, recurringId: r.id })
+    })
+    incomeExtras.filter((e) => e.contract_id === c.id).forEach((e) => {
+      opts.push({ value: `extra:${e.id}`, label: `${INCOME_LABELS[e.type] ?? e.type} (único)`, amount: e.amount, concept: e.type as WaiverConcept, extraId: e.id })
+    })
+    opts.push({ value: "other", label: "Otro cobro", amount: 0, concept: "other" })
+    return opts
+  }
+
+  function openWaive(c: Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile }) {
+    const first = waiveTargets(c)[0]
+    setWaiveContract(c)
+    setWaiveForm({ target: first.value, amount: String(first.amount), reason: "" })
+  }
+
+  async function saveWaiver() {
+    if (!waiveContract) return
+    const opt = waiveTargets(waiveContract).find((o) => o.value === waiveForm.target)
+    if (!opt) return
+    const amount = Number(waiveForm.amount)
+    if (!(amount >= 0) || (opt.concept === "other" && amount <= 0)) return
+    setWaiveBusy(true)
+    try {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      // Advertir si el mes ya tiene pago registrado (no descuenta lo ya cobrado, pero conviene avisar)
+      const alreadyPaid = monthlyPayments.find((p) => p.contract_id === waiveContract.id)
+      if (alreadyPaid && !confirm(`Este contrato ya tiene un pago registrado este mes (Q${alreadyPaid.amount.toLocaleString()}). La condonación no afecta lo ya cobrado, solo el "por cobrar". ¿Continuar?`)) {
+        setWaiveBusy(false); return
+      }
+
+      const { data, error } = await supabase.from("charge_waivers").insert({
+        contract_id: waiveContract.id,
+        room_id: waiveContract.room_id,
+        period_month: period,
+        concept: opt.concept,
+        recurring_charge_id: opt.recurringId ?? null,
+        income_extra_id: opt.extraId ?? null,
+        amount,
+        reason: waiveForm.reason || null,
+        created_by: user?.id ?? null,
+      }).select().single()
+      if (error) { alert("Error al condonar el cobro"); setWaiveBusy(false); return }
+
+      logAudit(
+        `Condonó ${opt.label.toLowerCase()} Q${amount.toLocaleString()} — Hab. ${waiveContract.room?.identifier} · ${period}${waiveForm.reason ? ` (${waiveForm.reason})` : ""}`,
+        "waiver", waiveContract.room?.identifier
+      )
+
+      const newWaiver = data as ChargeWaiver
+      setWaivers((prev) => [...prev, newWaiver])
+      // Recalcular por cobrar si la condonación aplica a renta/recurrente
+      if (opt.concept === "rent" || opt.recurringId) {
+        setSummary((prev) => prev ? { ...prev, porCobrar: Math.max(0, prev.porCobrar - amount) } : prev)
+      }
+      setWaiveContract(null)
+    } finally {
+      setWaiveBusy(false)
+    }
+  }
+
+  async function removeWaiver(w: ChargeWaiver) {
+    if (!confirm("¿Quitar esta condonación?")) return
+    const { createClient } = await import("@/lib/supabase/client")
+    const supabase = createClient()
+    const { error } = await supabase.from("charge_waivers").delete().eq("id", w.id)
+    if (error) { alert("Error al quitar la condonación"); return }
+    logAudit(`Quitó condonación de Q${w.amount.toLocaleString()} — ${w.period_month}`, "waiver")
+    setWaivers((prev) => prev.filter((x) => x.id !== w.id))
+    if (w.concept === "rent" || w.recurring_charge_id) {
+      setSummary((prev) => prev ? { ...prev, porCobrar: prev.porCobrar + w.amount } : prev)
+    }
   }
 
   const totalIncome = (summary?.cobrado ?? 0) + (summary?.variableIncome ?? 0)
@@ -380,26 +481,46 @@ export default function FinancesPanel() {
                 const payment = monthlyPayments.find((p) => p.contract_id === c.id)
                 const base = c.monthly_rent ?? c.room?.room_type?.price ?? 0
                 const rc = recurringCharges.filter((r) => r.contract_id === c.id).reduce((s, r) => s + r.amount, 0)
-                const expected = base + rc
+                const contractWaivers = waivers.filter((w) => w.contract_id === c.id)
+                const waivedExpected = contractWaivers
+                  .filter((w) => w.concept === "rent" || w.recurring_charge_id)
+                  .reduce((s, w) => s + w.amount, 0)
+                const expectedNeto = Math.max(0, base + rc - waivedExpected)
                 return (
-                  <div key={c.id} className="py-2.5 flex items-center justify-between gap-3">
-                    <div>
-                      <span className="text-sm font-medium text-gray-800">Hab. {c.room?.identifier}</span>
-                      <span className="text-xs text-gray-400 ml-2">{c.tenant_profile?.name}</span>
-                      {payment && (
-                        <span className="text-xs text-gray-400 ml-2">
-                          · {payment.source === "receipt" ? "comprobante" : "manual"}
-                        </span>
-                      )}
+                  <div key={c.id} className="py-2.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium text-gray-800">Hab. {c.room?.identifier}</span>
+                        <span className="text-xs text-gray-400 ml-2">{c.tenant_profile?.name}</span>
+                        {payment && (
+                          <span className="text-xs text-gray-400 ml-2">
+                            · {payment.source === "receipt" ? "comprobante" : payment.source === "abono" ? "abonos" : "manual"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {payment ? (
+                          <span className="text-xs font-medium text-green-700">✓ Q{payment.amount.toLocaleString()}</span>
+                        ) : (
+                          <span className="text-xs text-amber-600">Pendiente Q{expectedNeto.toLocaleString()}</span>
+                        )}
+                        <button
+                          onClick={() => openWaive(c)}
+                          className="text-[11px] px-2 py-1 rounded-md border border-gray-200 text-gray-500 hover:text-gray-800 hover:border-gray-300"
+                        >
+                          Condonar
+                        </button>
+                      </div>
                     </div>
-                    {payment ? (
-                      <span className="text-xs font-medium text-green-700 flex-shrink-0">
-                        ✓ Q{payment.amount.toLocaleString()}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-amber-600 flex-shrink-0">
-                        Pendiente Q{expected.toLocaleString()}
-                      </span>
+                    {contractWaivers.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {contractWaivers.map((w) => (
+                          <span key={w.id} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                            Condonado {INCOME_LABELS[w.concept] ?? (w.concept === "rent" ? "Renta" : w.concept)} −Q{w.amount.toLocaleString()}
+                            <button onClick={() => removeWaiver(w)} className="text-purple-400 hover:text-purple-700" title="Quitar">✕</button>
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
                 )
@@ -578,6 +699,79 @@ export default function FinancesPanel() {
           </div>
         </>
       )}
+
+      {/* Diálogo de condonación */}
+      {waiveContract && (() => {
+        const opts = waiveTargets(waiveContract)
+        const selected = opts.find((o) => o.value === waiveForm.target)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setWaiveContract(null)}>
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Condonar cobro</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Hab. {waiveContract.room?.identifier} · {waiveContract.tenant_profile?.name} · {MONTHS[month]} {year}
+                </p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Cobro a condonar</label>
+                <select
+                  value={waiveForm.target}
+                  onChange={(e) => {
+                    const o = opts.find((x) => x.value === e.target.value)
+                    setWaiveForm((p) => ({ ...p, target: e.target.value, amount: o && o.value !== "other" ? String(o.amount) : "" }))
+                  }}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-2 py-2 focus:outline-none"
+                >
+                  {opts.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}{o.value !== "other" ? ` — Q${o.amount.toLocaleString()}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Monto a condonar (Q)</label>
+                <input
+                  type="number"
+                  value={waiveForm.amount}
+                  onChange={(e) => setWaiveForm((p) => ({ ...p, amount: e.target.value }))}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-2 py-2 focus:outline-none"
+                  placeholder="0.00"
+                />
+                {selected && selected.value !== "other" && (
+                  <p className="text-[11px] text-gray-400 mt-1">Puedes condonar parcialmente (menos del total Q{selected.amount.toLocaleString()}).</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Motivo (opcional)</label>
+                <input
+                  type="text"
+                  value={waiveForm.reason}
+                  onChange={(e) => setWaiveForm((p) => ({ ...p, reason: e.target.value }))}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-2 py-2 focus:outline-none"
+                  placeholder="Ej: depósito pagado antes del sistema"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={saveWaiver}
+                  disabled={waiveBusy}
+                  className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-60"
+                >
+                  {waiveBusy ? "Guardando…" : "Condonar"}
+                </button>
+                <button
+                  onClick={() => setWaiveContract(null)}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

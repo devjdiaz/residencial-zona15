@@ -194,6 +194,21 @@ create table audit_log (
   created_at  timestamptz not null default now()
 );
 
+-- ── Charge waivers (condonaciones — admin exonera un cobro) ─
+create table charge_waivers (
+  id                  uuid primary key default gen_random_uuid(),
+  contract_id         uuid references contracts on delete cascade not null,
+  room_id             uuid references rooms on delete cascade not null,
+  period_month        text not null,  -- 'YYYY-MM' del mes condonado
+  concept             text not null check (concept in ('rent','deposit','contract_signing','parking','additional_person','other')),
+  recurring_charge_id uuid references recurring_charges on delete set null,
+  income_extra_id     uuid references income_extras on delete set null,
+  amount              numeric(10,2) not null check (amount >= 0),
+  reason              text,
+  created_by          uuid,
+  created_at          timestamptz not null default now()
+);
+
 -- ── Issue reports (tenant-reported damages → backoffice tasks)
 create table issue_reports (
   id                uuid primary key default gen_random_uuid(),
@@ -224,6 +239,7 @@ alter table income_extras   enable row level security;
 alter table recurring_charges enable row level security;
 alter table audit_log       enable row level security;
 alter table issue_reports   enable row level security;
+alter table charge_waivers  enable row level security;
 
 -- Grant table-level access to Supabase roles
 grant usage on schema public to anon, authenticated, service_role;
@@ -286,6 +302,12 @@ create policy "tenant_own_recurring_read" on recurring_charges for select using 
 -- Tenant: report issues and read own reports
 create policy "tenant_own_issues_insert" on issue_reports for insert with check (tenant_profile_id = auth.uid());
 create policy "tenant_own_issues_read"   on issue_reports for select using (tenant_profile_id = auth.uid());
+
+-- Charge waivers: admin full access; tenant reads own (to discount its total)
+create policy "admin_all_charge_waivers" on charge_waivers for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "tenant_own_charge_waivers_read" on charge_waivers for select using (
+  contract_id = (select contract_id from tenant_profiles where id = auth.uid())
+);
 
 -- =============================================================
 -- Storage buckets (create in Supabase dashboard or via CLI)
