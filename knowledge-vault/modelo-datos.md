@@ -26,6 +26,10 @@ Volver a [[00-Indice]]. Fuente: `supabase/schema.sql` + migraciones en `supabase
 | `recurring_charges` | cargos mensuales recurrentes | admin todo + dueño lee |
 | `audit_log` | bitácora append-only | admin/guardian inserta + **solo super_admin lee** |
 | `issue_reports` | daños reportados por inquilino | dueño inserta/lee + admin todo + **guardian lee/actualiza estado** |
+| `monthly_payments` | ingresos confirmados por mes (`source` `receipt`/`manual`/`abono`); `unique(contract_id, period_month)` | admin todo |
+| `charge_waivers` | condonaciones de cobros (renta, depósito, etc.) por mes; descuenta del total del inquilino y del "por cobrar" | admin todo + dueño lee |
+| `abono_requests` | solicitudes de pago parcial (inquilino propone monto → admin autoriza/contraoferta/rechaza); `authorized_amount` editable; `unique(contract_id, period_month)` | admin todo + dueño CRUD propio |
+| `abono_payments` | comprobantes de abono (varios por mes, sin unique); al verificar se suman a `monthly_payments` (`source='abono'`) | admin todo + dueño lee/inserta |
 
 ## Patrón RLS de admin
 La mayoría de policies de admin usan:
@@ -46,6 +50,8 @@ $$;
 Usada por las policies del bucket `room-photos`. El porqué: [[2026-06-08-rls-fotos-storage]].
 
 ## Migraciones (`supabase/migrations/`)
+- `2026-06-25_condonaciones.sql` — tabla `charge_waivers` (condonar cualquier cobro por mes) + RLS (admin todo, dueño lee). Idempotente. Ver [[2026-06-25]].
+- `2026-06-25_abonos.sql` — tablas `abono_requests` y `abono_payments` (pagos parciales con autorización) + amplía `monthly_payments.source` a incluir `abono` + RLS. Idempotente. Ver [[2026-06-25]].
 - `2026-06-22_contract-credentials-sent.sql` — `contracts.credentials_sent_at` (timestamptz, null). Marca el primer envío de credenciales por WhatsApp para que el botón no resetee la contraseña en reenvíos. Idempotente. Ver [[2026-06-22]].
 - `2026-06-12_email-signed-template.sql` — `tenant_profiles.email` (con backfill desde `auth.users`), `contracts.signed_at`, bucket `contract-templates` + policies. Idempotente. Ver [[email-inquilino-y-contrato-firmado]].
 - `2026-06-12_historial-contract-file.sql` — `contracts.contract_file_path`, bucket privado `contracts` + policies solo-admin. Idempotente. Ver [[2026-06-12-historial-y-archivo-contrato]].
@@ -61,7 +67,7 @@ Usada por las policies del bucket `room-photos`. El porqué: [[2026-06-08-rls-fo
 
 ## Storage buckets
 - **`room-photos`** — público para lectura; escritura (insert/delete/update) solo admin vía `current_user_role()`. Path: `rooms/{roomId}/{timestamp}-{filename}`.
-- **`receipts`** — privado, scoped por tenant. Path: `{user.id}/{periodo}/{filename}`.
+- **`receipts`** — privado, scoped por tenant. Path comprobante mensual: `{user.id}/{periodo}/{filename}`. Path abono: `{user.id}/abonos/{periodo}/{uuid}-{filename}` (varios por mes).
 - **`contracts`** — privado, solo admin (lectura y escritura vía `current_user_role()`). Contratos firmados escaneados. Path: `{contract_id}/{filename}`; lectura por signed URL (300s); al reemplazar con otro nombre se borra el anterior.
 
 > [!warning] Bucket público ≠ escritura pública

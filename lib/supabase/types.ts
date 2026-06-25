@@ -184,11 +184,46 @@ export interface MonthlyPayment {
   room_id: string
   period_month: string
   amount: number
-  source: "receipt" | "manual"
+  source: "receipt" | "manual" | "abono"
   receipt_id: string | null
   registered_by: string | null
   registered_at: string
   notes: string | null
+}
+
+export type AbonoStatus = "pending" | "authorized" | "rejected"
+
+export interface AbonoRequest {
+  id: string
+  contract_id: string
+  tenant_profile_id: string
+  room_id: string
+  period_month: string
+  requested_amount: number
+  month_total: number | null
+  status: AbonoStatus
+  authorized_amount: number | null
+  admin_notes: string | null
+  created_at: string
+  resolved_at: string | null
+  resolved_by: string | null
+}
+
+export interface AbonoPayment {
+  id: string
+  abono_request_id: string
+  contract_id: string
+  tenant_profile_id: string
+  room_id: string
+  period_month: string
+  amount: number
+  storage_path: string
+  file_hash: string | null
+  verified: boolean
+  rejected: boolean
+  rejection_reason: string | null
+  created_at: string
+  registered_by: string | null
 }
 
 export interface Database {
@@ -275,6 +310,16 @@ export interface Database {
         Row: ChargeWaiver
         Insert: Omit<ChargeWaiver, "id" | "created_at"> & { id?: string }
         Update: Partial<ChargeWaiver>
+      }
+      abono_requests: {
+        Row: AbonoRequest
+        Insert: Omit<AbonoRequest, "id" | "created_at" | "resolved_at" | "resolved_by"> & { id?: string; status?: AbonoStatus; resolved_at?: string | null; resolved_by?: string | null }
+        Update: Partial<AbonoRequest>
+      }
+      abono_payments: {
+        Row: AbonoPayment
+        Insert: Omit<AbonoPayment, "id" | "created_at"> & { id?: string }
+        Update: Partial<AbonoPayment>
       }
     }
   }
