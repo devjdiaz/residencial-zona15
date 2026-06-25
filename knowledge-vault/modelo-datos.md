@@ -19,7 +19,7 @@ Volver a [[00-Indice]]. Fuente: `supabase/schema.sql` + migraciones en `supabase
 | `rooms` | cuartos por propiedad, estado | lectura pública + admin todo |
 | `room_photos` | fotos de cuartos (path en storage) | lectura pública + admin escribe |
 | `tenant_profiles` | perfil inquilino (FK a `auth.users`); `email` es **copia** del de `auth.users` para mostrarlo en backoffice | dueño lee + admin todo |
-| `contracts` | contrato: fechas, día de pago, estado, `signed_at` (contrato firmado recibido), `credentials_sent_at` (primer envío de credenciales por WhatsApp — null = aún no enviadas; evita resetear la contraseña en reenvíos), `contract_file_path` (archivo firmado en bucket `contracts`), `monthly_rent` (renta negociada; null = precio de lista del tipo), `has_additional_person`/`additional_person_*` (persona adicional autorizada — sin cuenta propia, solo dato para el PDF), `has_parking`/`parking_vehicle_*` (vehículo autorizado en el parqueo) | dueño lee + admin todo |
+| `contracts` | contrato: fechas, día de pago, estado, `signed_at` (contrato firmado recibido), `credentials_sent_at` (primer envío de credenciales por WhatsApp — null = aún no enviadas; evita resetear la contraseña en reenvíos), `contract_file_path` (archivo firmado en bucket `contracts`), `monthly_rent` (renta negociada; null = precio de lista del tipo), `has_additional_person`/`additional_person_*` (persona adicional autorizada — sin cuenta propia, solo dato para el PDF), `has_parking`/`parking_vehicle_*` (vehículo autorizado en el parqueo). **A lo sumo 1 contrato `active` por habitación** (índice único parcial `contracts_one_active_per_room`; `ContractDialog` cierra el activo previo al crear) | dueño lee + admin todo |
 | `payment_receipts` | recibos mensuales, hash, rechazo, verificación | dueño CRUD propio + admin todo |
 | `expenses` | gastos por propiedad/compartidos | admin todo |
 | `income_extras` | cargos únicos (depósito, firma, persona extra, parqueo) | admin todo + dueño lee |
@@ -50,6 +50,8 @@ $$;
 Usada por las policies del bucket `room-photos`. El porqué: [[2026-06-08-rls-fotos-storage]].
 
 ## Migraciones (`supabase/migrations/`)
+- `2026-06-25_one-active-contract-per-room.sql` — índice único parcial `contracts_one_active_per_room` (`room_id where status='active'`): **a lo sumo un contrato activo por habitación**. Causa raíz de comprobantes "invisibles" en el admin: al recrear inquilinos no se cerraba el contrato anterior → 2 activos por habitación → el panel enlazaba al equivocado. Requiere datos limpios (se cerraron 11 duplicados antes de aplicar). El fix de código en `ContractDialog` cierra los activos previos al crear. Idempotente. Ver [[2026-06-25]].
+- `2026-06-25_receipts-tenant-delete.sql` — policy delete tenant en `payment_receipts` (solo `verified=false`) + policy delete tenant en storage `receipts` (carpeta propia `{user.id}/...`): el inquilino borra su comprobante mientras no esté aceptado. Idempotente. Ver [[2026-06-25]].
 - `2026-06-25_condonaciones.sql` — tabla `charge_waivers` (condonar cualquier cobro por mes) + RLS (admin todo, dueño lee). Idempotente. Ver [[2026-06-25]].
 - `2026-06-25_abonos.sql` — tablas `abono_requests` y `abono_payments` (pagos parciales con autorización) + amplía `monthly_payments.source` a incluir `abono` + RLS. Idempotente. Ver [[2026-06-25]].
 - `2026-06-22_contract-credentials-sent.sql` — `contracts.credentials_sent_at` (timestamptz, null). Marca el primer envío de credenciales por WhatsApp para que el botón no resetee la contraseña en reenvíos. Idempotente. Ver [[2026-06-22]].
