@@ -226,7 +226,10 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
       .select("*, tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(*)")
       .in("room_id", roomIds)
       .eq("status", "active")
+      .order("start_date", { ascending: true })
 
+    // Orden ascendente + Map (la última entrada gana) => si por algún residuo
+    // hubiera dos activos en una habitación, prevalece el contrato más reciente.
     const contractMap = new Map((contracts ?? []).map((c) => [c.room_id, c]))
     const merged = (allRooms ?? []).map((r) => ({ ...r, contract: contractMap.get(r.id) ?? null }))
     setRooms(merged as RoomWithDetails[])
