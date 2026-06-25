@@ -156,6 +156,28 @@ export interface IssueReport {
   resolved_at: string | null
 }
 
+export type WaiverConcept =
+  | "rent"
+  | "deposit"
+  | "contract_signing"
+  | "parking"
+  | "additional_person"
+  | "other"
+
+export interface ChargeWaiver {
+  id: string
+  contract_id: string
+  room_id: string
+  period_month: string
+  concept: WaiverConcept
+  recurring_charge_id: string | null
+  income_extra_id: string | null
+  amount: number
+  reason: string | null
+  created_by: string | null
+  created_at: string
+}
+
 export interface MonthlyPayment {
   id: string
   contract_id: string
@@ -248,6 +270,11 @@ export interface Database {
         Row: IssueReport
         Insert: Omit<IssueReport, "id" | "created_at" | "resolved_at"> & { id?: string; resolved_at?: string | null }
         Update: Partial<IssueReport>
+      }
+      charge_waivers: {
+        Row: ChargeWaiver
+        Insert: Omit<ChargeWaiver, "id" | "created_at"> & { id?: string }
+        Update: Partial<ChargeWaiver>
       }
     }
   }

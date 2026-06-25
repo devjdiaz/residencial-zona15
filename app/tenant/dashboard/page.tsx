@@ -32,6 +32,8 @@ interface Receipt {
 
 interface Charge { type: string; amount: number }
 
+interface Waiver { period_month: string; concept: string; amount: number }
+
 interface IssueRow {
   id: string
   description: string
@@ -50,6 +52,8 @@ const CHARGE_LABELS: Record<string, string> = {
   parking: "Parqueo",
   contract_signing: "Firma de contrato",
   deposit: "Depósito",
+  rent: "Renta",
+  other: "Otro cobro",
 }
 
 export default function TenantDashboard() {
@@ -57,6 +61,7 @@ export default function TenantDashboard() {
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [recurringItems, setRecurringItems] = useState<Charge[]>([])
   const [oneTimeItems, setOneTimeItems] = useState<Charge[]>([])
+  const [waivers, setWaivers] = useState<Waiver[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -174,6 +179,13 @@ export default function TenantDashboard() {
           .eq("contract_id", contractId)
           .in("type", ["deposit", "contract_signing"])
         setOneTimeItems((oneTime as Charge[]) ?? [])
+
+        // Condonaciones (waivers) del contrato
+        const { data: waiverRows } = await supabase
+          .from("charge_waivers")
+          .select("period_month, concept, amount")
+          .eq("contract_id", contractId)
+        setWaivers((waiverRows as Waiver[]) ?? [])
 
         // Report context (for issue reports)
         setReportCtx({
@@ -320,7 +332,10 @@ export default function TenantDashboard() {
   const isFirstMonth = startMonth === activePeriod
   const recurringTotal = recurringItems.reduce((s, c) => s + c.amount, 0)
   const oneTimeTotal = oneTimeItems.reduce((s, c) => s + c.amount, 0)
-  const totalToPay = (info?.price ?? 0) + recurringTotal + (isFirstMonth ? oneTimeTotal : 0)
+  const totalBruto = (info?.price ?? 0) + recurringTotal + (isFirstMonth ? oneTimeTotal : 0)
+  const waiversThisMonth = waivers.filter((w) => w.period_month === activePeriod)
+  const waiverTotal = waiversThisMonth.reduce((s, w) => s + w.amount, 0)
+  const totalToPay = Math.max(0, totalBruto - waiverTotal)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -402,6 +417,12 @@ export default function TenantDashboard() {
                 <div key={`o-${i}`} className="flex justify-between text-sm">
                   <span className="text-gray-500">{CHARGE_LABELS[c.type] ?? c.type} <span className="text-xs text-gray-400">(único)</span></span>
                   <span className="text-gray-900">Q{c.amount.toLocaleString()}</span>
+                </div>
+              ))}
+              {waiversThisMonth.map((w, i) => (
+                <div key={`w-${i}`} className="flex justify-between text-sm">
+                  <span className="text-green-700">{CHARGE_LABELS[w.concept] ?? w.concept} <span className="text-xs text-green-600">(condonado)</span></span>
+                  <span className="text-green-700">−Q{w.amount.toLocaleString()}</span>
                 </div>
               ))}
               <div className="flex justify-between pt-2 mt-1 border-t border-gray-100">
