@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Fraunces, DM_Sans } from "next/font/google"
 import "./globals.css"
 import "./front.css"
+import PWARegister from "@/components/PWARegister"
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -22,12 +23,21 @@ export const metadata: Metadata = {
   title: "Residencial El Maestro — Habitaciones en renta · Zona 15",
   description:
     "Habitaciones individuales en renta en Zona 15, Ciudad de Guatemala. Servicios incluidos, contratos desde 6 meses. Tu próximo hogar te está esperando.",
+  appleWebApp: {
+    capable: true,
+    title: "El Maestro Admin",
+    statusBarStyle: "default",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
 }
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#b64532",
 }
 
 export default function RootLayout({
@@ -37,7 +47,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={`${fraunces.variable} ${dmSans.variable}`}>
-      <body>{children}</body>
+      <body>
+        <PWARegister />
+        {children}
+      </body>
     </html>
   )
 }

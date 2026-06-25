@@ -263,6 +263,30 @@ create table issue_reports (
   resolved_at       timestamptz
 );
 
+-- Notificaciones push del admin (PWA + Web Push) — ver 2026-06-25_push-notifications.sql
+create table push_subscriptions (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references auth.users on delete cascade not null,
+  endpoint   text not null unique,
+  p256dh     text not null,
+  auth       text not null,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+
+create table notifications (
+  id          uuid primary key default gen_random_uuid(),
+  type        text not null,            -- receipt | abono_request | abono_payment | issue
+  title       text not null,
+  body        text,
+  url         text,
+  room_id     uuid,
+  contract_id uuid,
+  read        boolean not null default false,
+  created_at  timestamptz not null default now()
+);
+create index if not exists notifications_unread_idx on notifications (read, created_at desc);
+
 -- =============================================================
 -- Row Level Security
 -- =============================================================
@@ -282,6 +306,8 @@ alter table issue_reports   enable row level security;
 alter table charge_waivers  enable row level security;
 alter table abono_requests  enable row level security;
 alter table abono_payments  enable row level security;
+alter table push_subscriptions enable row level security;
+alter table notifications      enable row level security;
 
 -- Grant table-level access to Supabase roles
 grant usage on schema public to anon, authenticated, service_role;
@@ -362,6 +388,14 @@ create policy "tenant_own_abono_requests_update" on abono_requests for update us
 create policy "admin_all_abono_payments" on abono_payments for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
 create policy "tenant_own_abono_payments_read"   on abono_payments for select using (tenant_profile_id = auth.uid());
 create policy "tenant_own_abono_payments_insert" on abono_payments for insert with check (tenant_profile_id = auth.uid());
+
+-- Notificaciones push: el admin gestiona sus suscripciones y lee/marca su historial.
+create policy "push_subs_admin_own" on push_subscriptions for all to authenticated
+  using ( user_id = auth.uid() and public.current_user_role() in ('super_admin','admin') )
+  with check ( user_id = auth.uid() and public.current_user_role() in ('super_admin','admin') );
+create policy "notifications_admin_all" on notifications for all to authenticated
+  using ( public.current_user_role() in ('super_admin','admin') )
+  with check ( public.current_user_role() in ('super_admin','admin') );
 
 -- =============================================================
 -- Storage buckets (create in Supabase dashboard or via CLI)
