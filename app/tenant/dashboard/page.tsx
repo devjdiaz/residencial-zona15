@@ -1,5 +1,12 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+
+const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+
+function periodLabel(period: string): string {
+  const [year, month] = period.split("-")
+  return `${MONTH_NAMES[Number(month) - 1]} ${year}`
+}
 
 interface ContractInfo {
   identifier: string
@@ -53,6 +60,7 @@ export default function TenantDashboard() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("")
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Reportes de problemas
@@ -63,9 +71,54 @@ export default function TenantDashboard() {
   const [reportBusy, setReportBusy] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
 
-  const now = new Date()
-  const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-  const hasThisMonth = receipts.some((r) => r.period_month === currentPeriod)
+  // Meses del contrato (YYYY-MM) desde el mes de inicio hasta el mes de fin
+  const contractMonths = useMemo(() => {
+    if (!info?.startDate || !info?.endDate) return [] as string[]
+    const start = new Date(info.startDate + "T00:00:00")
+    const end = new Date(info.endDate + "T00:00:00")
+    const months: string[] = []
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1)
+    const last = new Date(end.getFullYear(), end.getMonth(), 1)
+    while (cursor <= last) {
+      months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`)
+      cursor.setMonth(cursor.getMonth() + 1)
+    }
+    return months
+  }, [info?.startDate, info?.endDate])
+
+  // Estado de un mes según los comprobantes
+  function periodStatus(period: string): "verified" | "rejected" | "pending" | "unpaid" {
+    const r = receipts.find((x) => x.period_month === period)
+    if (!r) return "unpaid"
+    if (r.verified) return "verified"
+    if (r.rejected) return "rejected"
+    return "pending"
+  }
+
+  // Default: primer mes sin comprobante verificado (próximo mes sin pagar)
+  const defaultPeriod = useMemo(() => {
+    if (contractMonths.length === 0) return ""
+    const nextUnpaid = contractMonths.find((m) => {
+      const r = receipts.find((x) => x.period_month === m)
+      return !r || !r.verified
+    })
+    return nextUnpaid ?? contractMonths[contractMonths.length - 1]
+  }, [contractMonths, receipts])
+
+  // Mes activo: el elegido por el inquilino, o el default mientras no haya elegido
+  const activePeriod = selectedPeriod || defaultPeriod
+  const hasSelectedMonth = receipts.some((r) => r.period_month === activePeriod)
+
+  // Cobertura del pago seleccionado (pago por adelantado): día de pago → día de pago del mes siguiente
+  const coverage = useMemo(() => {
+    if (!activePeriod || !info) return null
+    const [year, month] = activePeriod.split("-").map(Number)
+    const day = info.paymentDay
+    const start = new Date(year, month - 1, day)
+    const end = new Date(year, month, day)
+    const fmt = (d: Date) => d.toLocaleDateString("es-GT", { day: "numeric", month: "short" })
+    return { start: fmt(start), end: fmt(end) }
+  }, [activePeriod, info])
 
   useEffect(() => {
     async function load() {
@@ -185,6 +238,7 @@ export default function TenantDashboard() {
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    if (!activePeriod) { setUploadError("Selecciona el mes que vas a pagar."); return }
     setUploading(true)
     setUploadError(null)
     try {
@@ -209,15 +263,13 @@ export default function TenantDashboard() {
         .eq("contract_id", contractId)
         .not("file_hash", "is", null)
       const duplicate = (existingReceipts ?? []).find(
-        (r) => r.file_hash === fileHash && r.period_month !== currentPeriod
+        (r) => r.file_hash === fileHash && r.period_month !== activePeriod
       )
       if (duplicate) {
-        const [year, month] = duplicate.period_month.split("-")
-        const months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
-        throw new Error(`Este comprobante ya fue enviado para ${months[Number(month) - 1]} ${year}. Sube el comprobante del mes actual.`)
+        throw new Error(`Este comprobante ya fue enviado para ${periodLabel(duplicate.period_month)}. Sube el comprobante del mes que vas a pagar.`)
       }
 
-      const path = `${user.id}/${currentPeriod}/${file.name}`
+      const path = `${user.id}/${activePeriod}/${file.name}`
       const { error: storageErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: true })
       if (storageErr) throw storageErr
 
@@ -227,7 +279,7 @@ export default function TenantDashboard() {
         .upsert({
           tenant_profile_id: user.id,
           contract_id: contractId,
-          period_month: currentPeriod,
+          period_month: activePeriod,
           storage_path: path,
           file_hash: fileHash,
           verified: false,
@@ -238,7 +290,7 @@ export default function TenantDashboard() {
         .single()
       if (recErr) throw recErr
 
-      setReceipts((prev) => [rec as Receipt, ...prev.filter((r) => r.period_month !== currentPeriod)])
+      setReceipts((prev) => [rec as Receipt, ...prev.filter((r) => r.period_month !== activePeriod)])
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Error al subir el comprobante")
     } finally {
@@ -265,7 +317,7 @@ export default function TenantDashboard() {
 
   // Total a pagar: primer mes incluye depósito + firma; demás meses solo renta + recurrentes
   const startMonth = info?.startDate ? info.startDate.slice(0, 7) : ""
-  const isFirstMonth = startMonth === currentPeriod
+  const isFirstMonth = startMonth === activePeriod
   const recurringTotal = recurringItems.reduce((s, c) => s + c.amount, 0)
   const oneTimeTotal = oneTimeItems.reduce((s, c) => s + c.amount, 0)
   const totalToPay = (info?.price ?? 0) + recurringTotal + (isFirstMonth ? oneTimeTotal : 0)
@@ -330,7 +382,7 @@ export default function TenantDashboard() {
         {info && (
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Total a pagar este mes</p>
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Total a pagar{activePeriod ? ` · ${periodLabel(activePeriod)}` : ""}</p>
               {isFirstMonth && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Primer pago</span>
               )}
@@ -363,8 +415,31 @@ export default function TenantDashboard() {
         {/* Upload receipt */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-3">Comprobante de pago</p>
-          {hasThisMonth ? (() => {
-            const current = receipts.find((r) => r.period_month === currentPeriod)
+
+          {/* Selector de mes a pagar */}
+          {contractMonths.length > 0 && (
+            <div className="mb-4">
+              <label className="block text-sm text-gray-600 mb-1.5">¿Qué mes vas a pagar?</label>
+              <select
+                value={activePeriod}
+                onChange={(e) => { setSelectedPeriod(e.target.value); setUploadError(null) }}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+              >
+                {contractMonths.map((m) => {
+                  const labels = { verified: "✓ pagado", pending: "pendiente", rejected: "✕ rechazado", unpaid: "sin pagar" }
+                  return (
+                    <option key={m} value={m}>{periodLabel(m)} — {labels[periodStatus(m)]}</option>
+                  )
+                })}
+              </select>
+              {coverage && (
+                <p className="text-xs text-gray-400 mt-1.5">Cubre del {coverage.start} al {coverage.end}</p>
+              )}
+            </div>
+          )}
+
+          {hasSelectedMonth ? (() => {
+            const current = receipts.find((r) => r.period_month === activePeriod)
             if (current?.rejected) {
               return (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
@@ -405,7 +480,7 @@ export default function TenantDashboard() {
             )
           })() : (
             <div>
-              <p className="text-sm text-gray-600 mb-3">Sube tu comprobante de pago de este mes.</p>
+              <p className="text-sm text-gray-600 mb-3">Sube tu comprobante de pago de {activePeriod ? periodLabel(activePeriod) : "este mes"}.</p>
               <button
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading}
