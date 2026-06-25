@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import AccountDialog from "./AccountDialog"
+import NotificationsBell from "./NotificationsBell"
 
 export default function AdminHeader() {
   const router = useRouter()
@@ -82,6 +83,10 @@ export default function AdminHeader() {
           </div>
         </div>
 
+        {/* Cluster derecho: campana (siempre) + nav escritorio + hamburguesa */}
+        <div className="flex items-center gap-1">
+        <NotificationsBell />
+
         {/* Nav escritorio (lg+) — sin cambios respecto al diseño actual */}
         <div className="hidden lg:flex items-center gap-1">
           <a href="/admin/buscar" className={linkClass("/admin/buscar")}>Buscar</a>
@@ -136,6 +141,7 @@ export default function AdminHeader() {
             <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-[#b64532]" />
           )}
         </button>
+        </div>
       </div>
 
       {/* Menú desplegable móvil (<lg) */}
