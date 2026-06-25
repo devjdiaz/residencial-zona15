@@ -19,6 +19,7 @@ export default function HistorialView({ properties }: { properties: Property[] }
   const [activeId, setActiveId] = useState(properties[0]?.id ?? "")
   const [rooms, setRooms] = useState<RoomRow[]>([])
   const [contracts, setContracts] = useState<ContractRow[]>([])
+  const [pendingByContract, setPendingByContract] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [dialog, setDialog] = useState<DialogState>(null)
 
@@ -44,8 +45,23 @@ export default function HistorialView({ properties }: { properties: Property[] }
         .in("room_id", roomIds.length ? roomIds : ["none"])
         .eq("status", "active") as { data: ContractRow[] | null }
 
+      // Comprobantes pendientes de autorizar (subidos, sin verificar ni rechazar) por contrato
+      const contractIds = (contractRows ?? []).map((c) => c.id)
+      const { data: pendingRows } = await supabase
+        .from("payment_receipts")
+        .select("contract_id")
+        .in("contract_id", contractIds.length ? contractIds : ["none"])
+        .eq("verified", false)
+        .eq("rejected", false)
+      const pending: Record<string, number> = {}
+      for (const row of pendingRows ?? []) {
+        const cid = (row as { contract_id: string }).contract_id
+        pending[cid] = (pending[cid] ?? 0) + 1
+      }
+
       setRooms(roomRows ?? [])
       setContracts(contractRows ?? [])
+      setPendingByContract(pending)
       setLoading(false)
     }
     load()
@@ -92,6 +108,7 @@ export default function HistorialView({ properties }: { properties: Property[] }
         <div className="space-y-3">
           {rooms.map((room) => {
             const contract = contractFor(room.id)
+            const pending = contract ? (pendingByContract[contract.id] ?? 0) : 0
             return (
               <div key={room.id} className="bg-white rounded-xl border border-gray-100 p-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -113,9 +130,14 @@ export default function HistorialView({ properties }: { properties: Property[] }
                   <button
                     disabled={!contract}
                     onClick={() => contract && setDialog({ kind: "receipts", room, contract })}
-                    className={`${actionBtn} border-gray-200 text-gray-600 hover:bg-gray-50`}
+                    className={`${actionBtn} relative ${pending > 0 ? "border-amber-300 bg-amber-50 text-amber-800 font-semibold" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
                   >
                     🧾 Comprobantes
+                    {pending > 0 && (
+                      <span className="ml-1.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold align-middle">
+                        {pending}
+                      </span>
+                    )}
                   </button>
                   <button
                     onClick={() => setDialog({ kind: "reports", room })}
@@ -157,6 +179,9 @@ export default function HistorialView({ properties }: { properties: Property[] }
         <ReceiptsDialog
           contract={dialog.contract}
           roomIdentifier={dialog.room.identifier}
+          onPendingChange={(count) =>
+            setPendingByContract((prev) => ({ ...prev, [dialog.contract.id]: count }))
+          }
           onClose={() => setDialog(null)}
         />
       )}

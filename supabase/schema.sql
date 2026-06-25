@@ -328,6 +328,7 @@ create policy "tenant_own_contract" on contracts         for select using (
 create policy "tenant_own_receipts_read"   on payment_receipts for select using (tenant_profile_id = auth.uid());
 create policy "tenant_own_receipts_insert" on payment_receipts for insert with check (tenant_profile_id = auth.uid());
 create policy "tenant_own_receipts_update" on payment_receipts for update using (tenant_profile_id = auth.uid());
+create policy "tenant_own_receipts_delete" on payment_receipts for delete using (tenant_profile_id = auth.uid() and verified = false);
 
 -- Tenant: read own charges (to show total to pay)
 create policy "tenant_own_extras_read" on income_extras for select using (
@@ -416,6 +417,7 @@ create policy "contracts_admin_delete"
 -- folder (policies set in dashboard); admin can read (signed URLs) and delete (cleanup).
 drop policy if exists "receipts_admin_read"   on storage.objects;
 drop policy if exists "receipts_admin_delete" on storage.objects;
+drop policy if exists "receipts_tenant_delete" on storage.objects;
 
 create policy "receipts_admin_read"
   on storage.objects for select to authenticated
@@ -424,5 +426,11 @@ create policy "receipts_admin_read"
 create policy "receipts_admin_delete"
   on storage.objects for delete to authenticated
   using ( bucket_id = 'receipts' and public.current_user_role() in ('super_admin','admin') );
--- Nota: las policies tenant-scoped del bucket `receipts` (insert/select/update de la
--- carpeta propia {user.id}/...) viven en el dashboard de Supabase, no versionadas.
+
+-- Tenant borra archivos de su propia carpeta {user.id}/... (el candado "no verificado"
+-- vive en el row DB + UI). Migración: 2026-06-25_receipts-tenant-delete.sql
+create policy "receipts_tenant_delete"
+  on storage.objects for delete to authenticated
+  using ( bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text );
+-- Nota: las policies tenant-scoped restantes del bucket `receipts` (insert/select/update de
+-- la carpeta propia {user.id}/...) viven en el dashboard de Supabase, no versionadas.

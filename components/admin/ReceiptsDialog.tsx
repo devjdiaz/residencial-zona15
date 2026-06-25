@@ -14,9 +14,12 @@ interface Props {
   contract: Contract & { tenant_profile?: TenantProfile }
   roomIdentifier: string
   onClose: () => void
+  onPendingChange?: (pendingCount: number) => void
 }
 
-export default function ReceiptsDialog({ contract, roomIdentifier, onClose }: Props) {
+const countPending = (rows: PaymentReceipt[]) => rows.filter((r) => !r.verified && !r.rejected).length
+
+export default function ReceiptsDialog({ contract, roomIdentifier, onClose, onPendingChange }: Props) {
   const [receipts, setReceipts] = useState<PaymentReceipt[]>([])
   const [loading, setLoading] = useState(true)
   const [recurringCharges, setRecurringCharges] = useState<{ amount: number }[]>([])
@@ -36,6 +39,7 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose }: Pr
         .eq("contract_id", contract.id)
         .order("period_month", { ascending: false })
       setReceipts(data ?? [])
+      onPendingChange?.(countPending(data ?? []))
 
       // Cargos recurrentes (para calcular monto al aprobar)
       const { data: rcData } = await supabase
@@ -102,9 +106,11 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose }: Pr
       notes: null,
     }, { onConflict: "contract_id,period_month" })
 
-    setReceipts((prev) => prev.map((r) =>
+    const next = receipts.map((r) =>
       r.id === receipt.id ? { ...r, verified: true, rejected: false, rejection_reason: null } : r
-    ))
+    )
+    setReceipts(next)
+    onPendingChange?.(countPending(next))
     logAudit(
       `Aceptó comprobante — Hab. ${roomIdentifier} · ${receipt.period_month} · Q${totalAmount.toLocaleString()}`,
       "receipt", roomIdentifier
@@ -119,9 +125,11 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose }: Pr
     await supabase.from("payment_receipts")
       .update({ verified: false, rejected: true, rejection_reason: reason || null })
       .eq("id", receipt.id)
-    setReceipts((prev) => prev.map((r) => r.id === receipt.id
+    const next = receipts.map((r) => r.id === receipt.id
       ? { ...r, verified: false, rejected: true, rejection_reason: reason || null }
-      : r))
+      : r)
+    setReceipts(next)
+    onPendingChange?.(countPending(next))
     logAudit(`Rechazó comprobante — Hab. ${roomIdentifier} · ${receipt.period_month}${reason ? ` (${reason})` : ""}`, "receipt", roomIdentifier)
   }
 
@@ -171,20 +179,22 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose }: Pr
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button onClick={() => viewReceipt(r.storage_path)}
-                    className="text-xs text-[#24577a] hover:underline">Ver</button>
+                    className="text-xs px-3 py-1.5 rounded-lg bg-[#24577a]/10 text-[#24577a] border border-[#24577a]/30 hover:bg-[#24577a]/20 transition-colors font-medium">
+                    👁 Ver
+                  </button>
                   {r.verified ? (
-                    <span className="text-xs text-green-600 font-medium">✓ Verificado</span>
+                    <span className="text-xs text-green-600 font-medium sm:ml-2">✓ Verificado</span>
                   ) : (
-                    <>
+                    <div className="flex items-center gap-1.5 sm:ml-2 sm:pl-2 sm:border-l sm:border-gray-200">
                       <button onClick={() => verifyReceipt(r)}
-                        className="text-xs px-2 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100 transition-colors border border-green-200">
+                        className="text-xs px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors border border-green-200">
                         Aceptar
                       </button>
                       <button onClick={() => rejectReceipt(r)}
-                        className={`text-xs px-2 py-1 rounded transition-colors border ${r.rejected ? "bg-red-100 text-red-700 border-red-300" : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"}`}>
+                        className={`text-xs px-2.5 py-1.5 rounded-lg transition-colors border ${r.rejected ? "bg-red-100 text-red-700 border-red-300" : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"}`}>
                         {r.rejected ? "Rechazado" : "Rechazar"}
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
