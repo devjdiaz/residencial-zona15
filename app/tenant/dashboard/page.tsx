@@ -84,7 +84,9 @@ export default function TenantDashboard() {
   const [abonoRequests, setAbonoRequests] = useState<AbonoReq[]>([])
   const [abonoPayments, setAbonoPayments] = useState<AbonoPay[]>([])
   const [uploading, setUploading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState<string>("")
   const fileRef = useRef<HTMLInputElement>(null)
@@ -293,8 +295,10 @@ export default function TenantDashboard() {
     const file = e.target.files?.[0]
     if (!file) return
     if (!activePeriod) { setUploadError("Selecciona el mes que vas a pagar."); return }
+    const wasReplace = receipts.some((r) => r.period_month === activePeriod)
     setUploading(true)
     setUploadError(null)
+    setUploadNotice(null)
     try {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
@@ -345,6 +349,7 @@ export default function TenantDashboard() {
       if (recErr) throw recErr
 
       setReceipts((prev) => [rec as Receipt, ...prev.filter((r) => r.period_month !== activePeriod)])
+      setUploadNotice(wasReplace ? "Comprobante reemplazado correctamente ✓" : "Comprobante subido correctamente ✓")
     } catch (err: unknown) {
       console.error("handleUpload", err)
       const msg = err instanceof Error
@@ -356,6 +361,41 @@ export default function TenantDashboard() {
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ""
+    }
+  }
+
+  async function handleDelete() {
+    const current = receipts.find((r) => r.period_month === activePeriod)
+    if (!current || current.verified) return
+    if (!window.confirm(`¿Eliminar el comprobante de ${periodLabel(current.period_month)}? Podrás subir otro.`)) return
+    setDeleting(true)
+    setUploadError(null)
+    setUploadNotice(null)
+    try {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
+      const { error: delErr } = await supabase
+        .from("payment_receipts")
+        .delete()
+        .eq("id", current.id)
+      if (delErr) throw delErr
+
+      // El archivo solo importa junto a su row; si falla su borrado, ya quedó huérfano e invisible para admin.
+      const { error: storageErr } = await supabase.storage.from("receipts").remove([current.storage_path])
+      if (storageErr) console.error("handleDelete storage", storageErr)
+
+      setReceipts((prev) => prev.filter((r) => r.period_month !== activePeriod))
+      setUploadNotice("Comprobante eliminado ✓")
+    } catch (err: unknown) {
+      console.error("handleDelete", err)
+      const msg = err instanceof Error
+        ? err.message
+        : (err && typeof err === "object" && "message" in err)
+          ? String((err as { message: unknown }).message)
+          : "Error al eliminar el comprobante"
+      setUploadError(msg)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -603,7 +643,7 @@ export default function TenantDashboard() {
               <label className="block text-sm text-gray-600 mb-1.5">¿Qué mes vas a pagar?</label>
               <select
                 value={activePeriod}
-                onChange={(e) => { setSelectedPeriod(e.target.value); setUploadError(null) }}
+                onChange={(e) => { setSelectedPeriod(e.target.value); setUploadError(null); setUploadNotice(null) }}
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
               >
                 {contractMonths.map((m) => {
@@ -637,10 +677,17 @@ export default function TenantDashboard() {
                   </div>
                   <button
                     onClick={() => fileRef.current?.click()}
-                    disabled={uploading}
+                    disabled={uploading || deleting}
                     className="mt-3 w-full py-2.5 rounded-lg bg-[#b64532] text-white text-sm font-medium hover:bg-[#9a3727] transition-colors disabled:opacity-60"
                   >
                     {uploading ? "Subiendo…" : "Subir comprobante corregido"}
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={uploading || deleting}
+                    className="mt-2 w-full py-2 rounded-lg text-sm text-red-600 hover:bg-red-100 transition-colors disabled:opacity-60"
+                  >
+                    {deleting ? "Eliminando…" : "Eliminar comprobante"}
                   </button>
                 </div>
               )
@@ -654,9 +701,21 @@ export default function TenantDashboard() {
                     {current?.verified ? "Verificado por la administradora" : "Pendiente de verificación"}
                   </p>
                 </div>
-                <button onClick={() => fileRef.current?.click()} className="ml-auto text-xs text-green-700 underline">
-                  Reemplazar
-                </button>
+                {!current?.verified && (
+                  <div className="ml-auto flex items-center gap-3">
+                    <button onClick={() => fileRef.current?.click()} disabled={uploading || deleting} className="text-xs text-green-700 underline disabled:opacity-60">
+                      Reemplazar
+                    </button>
+                    <button onClick={handleDelete} disabled={uploading || deleting} className="text-xs text-red-600 underline disabled:opacity-60">
+                      {deleting ? "Eliminando…" : "Eliminar"}
+                    </button>
+                  </div>
+                )}
+                {current?.verified && (
+                  <button onClick={() => fileRef.current?.click()} disabled={uploading || deleting} className="ml-auto text-xs text-green-700 underline disabled:opacity-60">
+                    Reemplazar
+                  </button>
+                )}
               </div>
             )
           })() : (
@@ -674,6 +733,9 @@ export default function TenantDashboard() {
           <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
           {uploadError && (
             <p className="text-xs text-red-600 mt-2">{uploadError}</p>
+          )}
+          {uploadNotice && !uploadError && (
+            <p className="text-xs text-green-600 mt-2">{uploadNotice}</p>
           )}
         </div>
 
