@@ -114,7 +114,15 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
       })
       if (profileErr) throw profileErr
 
-      // 2. Create contract (tenant_profile now exists)
+      // 2. Cerrar cualquier contrato activo previo de esta habitación para que
+      //    nunca queden dos activos a la vez (causaba comprobantes "invisibles").
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("contracts")
+        .update({ status: "ended" })
+        .eq("room_id", room.id)
+        .eq("status", "active")
+
+      // 3. Create contract (tenant_profile now exists)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: contractData, error: contractErr } = await (supabase as any)
         .from("contracts")
@@ -144,7 +152,7 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
         .single()
       if (contractErr) throw contractErr
 
-      // 3. Link contract back to profile
+      // 4. Link contract back to profile
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from("tenant_profiles").update({ contract_id: contractData.id }).eq("id", tenantId)
 

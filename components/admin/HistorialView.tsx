@@ -43,7 +43,8 @@ export default function HistorialView({ properties }: { properties: Property[] }
         .from("contracts")
         .select("*, tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(*)")
         .in("room_id", roomIds.length ? roomIds : ["none"])
-        .eq("status", "active") as { data: ContractRow[] | null }
+        .eq("status", "active")
+        .order("start_date", { ascending: false }) as { data: ContractRow[] | null }
 
       // Comprobantes pendientes de autorizar (subidos, sin verificar ni rechazar) por contrato
       const contractIds = (contractRows ?? []).map((c) => c.id)

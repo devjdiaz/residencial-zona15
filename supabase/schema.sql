@@ -135,6 +135,10 @@ create table contracts (
 alter table tenant_profiles
   add constraint fk_contract foreign key (contract_id) references contracts on delete set null;
 
+-- Un solo contrato activo por habitación (evita comprobantes "invisibles" en el admin).
+create unique index if not exists contracts_one_active_per_room
+  on contracts (room_id) where status = 'active';
+
 -- ── Payment receipts ───────────────────────────────────────
 create table payment_receipts (
   id                 uuid primary key default gen_random_uuid(),
