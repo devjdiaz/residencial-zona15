@@ -105,7 +105,7 @@ export default function AbonosManager({ roomId }: { roomId?: string } = {}) {
     const { createClient } = await import("@/lib/supabase/client")
     const sb = createClient()
     const { data, error } = await sb.storage.from("receipts").createSignedUrl(storagePath, 300)
-    if (error || !data) { alert("No se pudo abrir el comprobante"); return }
+    if (error || !data) { console.error("createSignedUrl receipts (abono)", error); alert(`No se pudo abrir el comprobante${error ? `: ${error.message}` : ""}`); return }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer")
   }
 
