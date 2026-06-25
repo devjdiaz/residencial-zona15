@@ -209,6 +209,42 @@ create table charge_waivers (
   created_at          timestamptz not null default now()
 );
 
+-- ── Abono requests (pagos parciales con autorización del admin) ─
+create table abono_requests (
+  id                uuid primary key default gen_random_uuid(),
+  contract_id       uuid references contracts on delete cascade not null,
+  tenant_profile_id uuid references tenant_profiles on delete cascade not null,
+  room_id           uuid references rooms on delete cascade not null,
+  period_month      text not null,
+  requested_amount  numeric(10,2) not null check (requested_amount > 0),
+  month_total       numeric(10,2),
+  status            text not null default 'pending' check (status in ('pending','authorized','rejected')),
+  authorized_amount numeric(10,2),
+  admin_notes       text,
+  created_at        timestamptz not null default now(),
+  resolved_at       timestamptz,
+  resolved_by       uuid,
+  unique (contract_id, period_month)
+);
+
+-- ── Abono payments (comprobantes de abono, varios por mes) ──
+create table abono_payments (
+  id                uuid primary key default gen_random_uuid(),
+  abono_request_id  uuid references abono_requests on delete cascade not null,
+  contract_id       uuid references contracts on delete cascade not null,
+  tenant_profile_id uuid references tenant_profiles on delete cascade not null,
+  room_id           uuid references rooms on delete cascade not null,
+  period_month      text not null,
+  amount            numeric(10,2) not null check (amount > 0),
+  storage_path      text not null,
+  file_hash         text,
+  verified          boolean not null default false,
+  rejected          boolean not null default false,
+  rejection_reason  text,
+  created_at        timestamptz not null default now(),
+  registered_by     uuid
+);
+
 -- ── Issue reports (tenant-reported damages → backoffice tasks)
 create table issue_reports (
   id                uuid primary key default gen_random_uuid(),
@@ -240,6 +276,8 @@ alter table recurring_charges enable row level security;
 alter table audit_log       enable row level security;
 alter table issue_reports   enable row level security;
 alter table charge_waivers  enable row level security;
+alter table abono_requests  enable row level security;
+alter table abono_payments  enable row level security;
 
 -- Grant table-level access to Supabase roles
 grant usage on schema public to anon, authenticated, service_role;
@@ -308,6 +346,17 @@ create policy "admin_all_charge_waivers" on charge_waivers for all using ((auth.
 create policy "tenant_own_charge_waivers_read" on charge_waivers for select using (
   contract_id = (select contract_id from tenant_profiles where id = auth.uid())
 );
+
+-- Abono requests: admin full access; tenant CRUD own (create/read/re-solicit)
+create policy "admin_all_abono_requests" on abono_requests for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "tenant_own_abono_requests_read"   on abono_requests for select using (tenant_profile_id = auth.uid());
+create policy "tenant_own_abono_requests_insert" on abono_requests for insert with check (tenant_profile_id = auth.uid());
+create policy "tenant_own_abono_requests_update" on abono_requests for update using (tenant_profile_id = auth.uid());
+
+-- Abono payments: admin full access; tenant reads/inserts own
+create policy "admin_all_abono_payments" on abono_payments for all using ((auth.jwt()->'user_metadata'->>'role') in ('super_admin','admin'));
+create policy "tenant_own_abono_payments_read"   on abono_payments for select using (tenant_profile_id = auth.uid());
+create policy "tenant_own_abono_payments_insert" on abono_payments for insert with check (tenant_profile_id = auth.uid());
 
 -- =============================================================
 -- Storage buckets (create in Supabase dashboard or via CLI)

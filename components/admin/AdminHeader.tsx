@@ -9,6 +9,7 @@ export default function AdminHeader() {
   const [role, setRole] = useState<string | null>(null)
   const [email, setEmail] = useState<string>("")
   const [openIssues, setOpenIssues] = useState(0)
+  const [pendingAbonos, setPendingAbonos] = useState(0)
   const [showAccount, setShowAccount] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -25,6 +26,11 @@ export default function AdminHeader() {
         .select("id", { count: "exact", head: true })
         .eq("status", "open")
       setOpenIssues(count ?? 0)
+      const { count: abonoCount } = await sb
+        .from("abono_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+      setPendingAbonos(abonoCount ?? 0)
     }
     load()
   }, [pathname])
@@ -56,6 +62,12 @@ export default function AdminHeader() {
     </span>
   )
 
+  const abonosBadge = pendingAbonos > 0 && (
+    <span className="ml-1.5 inline-grid min-w-[16px] h-4 px-1 rounded-full bg-[#b64532] text-white text-[10px] font-bold place-items-center align-middle">
+      {pendingAbonos}
+    </span>
+  )
+
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
@@ -80,6 +92,14 @@ export default function AdminHeader() {
             {openIssues > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#b64532] text-white text-[10px] font-bold grid place-items-center">
                 {openIssues}
+              </span>
+            )}
+          </a>
+          <a href="/admin/abonos" className={`${linkClass("/admin/abonos")} relative`}>
+            Abonos
+            {pendingAbonos > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#b64532] text-white text-[10px] font-bold grid place-items-center">
+                {pendingAbonos}
               </span>
             )}
           </a>
@@ -112,7 +132,7 @@ export default function AdminHeader() {
               <path d="M3 12h18M3 6h18M3 18h18" />
             </svg>
           )}
-          {!menuOpen && openIssues > 0 && (
+          {!menuOpen && (openIssues > 0 || pendingAbonos > 0) && (
             <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-[#b64532]" />
           )}
         </button>
@@ -127,6 +147,9 @@ export default function AdminHeader() {
             <a href="/admin/finances" className={mobileLinkClass("/admin/finances")}>Finanzas</a>
             <a href="/admin/reportes" className={mobileLinkClass("/admin/reportes")}>
               Reportes{reportesBadge}
+            </a>
+            <a href="/admin/abonos" className={mobileLinkClass("/admin/abonos")}>
+              Abonos{abonosBadge}
             </a>
             <a href="/admin/historial" className={mobileLinkClass("/admin/historial")}>Historial</a>
             {isSuper && <a href="/admin/bitacora" className={mobileLinkClass("/admin/bitacora")}>Bitácora</a>}
