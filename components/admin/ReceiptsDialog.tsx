@@ -50,13 +50,13 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose, onPe
         .eq("contract_id", contract.id)
       setRecurringCharges(rcData ?? [])
 
-      // Precio de lista del tipo de la habitación (fallback si monthly_rent es null)
+      // Precio de lista de la habitación (fallback si monthly_rent es null)
       const { data: room } = await supabase
         .from("rooms")
-        .select("room_type:room_types(price)")
+        .select("price")
         .eq("id", contract.room_id)
         .single()
-      setListPrice((room?.room_type as { price?: number } | null)?.price ?? 0)
+      setListPrice((room as { price?: number | null } | null)?.price ?? 0)
 
       // Detección de comprobantes duplicados entre todos los inquilinos
       const hashes = (data ?? []).map((r) => r.file_hash).filter(Boolean) as string[]

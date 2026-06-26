@@ -6,7 +6,7 @@ import ContractInfoDialog from "./ContractInfoDialog"
 
 type ContractRow = Contract & {
   tenant_profile?: TenantProfile
-  room?: { identifier: string; property?: { name: string } | null; room_type?: { price: number } | null } | null
+  room?: { identifier: string; property?: { name: string } | null; price?: number | null } | null
 }
 
 function vehicleTypeLabel(type: string) {
@@ -118,7 +118,7 @@ export default function SearchView() {
     const sb = createClient()
     const { data } = await sb
       .from("contracts")
-      .select("*, tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(*), room:rooms(identifier, property:properties(name), room_type:room_types(price))")
+      .select("*, tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(*), room:rooms(identifier, price, property:properties(name))")
       .order("start_date", { ascending: false })
     setContracts((data as ContractRow[]) ?? [])
     setLoading(false)
@@ -164,7 +164,7 @@ export default function SearchView() {
         <ContractInfoDialog
           contract={openContract}
           roomIdentifier={openContract.room?.identifier ?? "—"}
-          listPrice={openContract.room?.room_type?.price ?? null}
+          listPrice={openContract.room?.price ?? null}
           onClose={() => setOpenContractId(null)}
           onUpdated={load}
         />

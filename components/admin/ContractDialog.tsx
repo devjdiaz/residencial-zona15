@@ -4,7 +4,7 @@ import type { Room } from "@/lib/supabase/types"
 import { logAudit } from "@/lib/audit"
 
 interface Props {
-  room: Room & { room_type?: { label: string; price: number } }
+  room: Room & { room_type?: { label: string } }
   onClose: () => void
   onCreated: (credentials: { email: string; password: string; name: string; phone: string; contractId: string }) => void
 }
@@ -25,7 +25,7 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
   const [dpi, setDpi] = useState("")
   const [startDate, setStartDate] = useState(today)
   const [durationMonths, setDurationMonths] = useState(6)
-  const [monthlyRent, setMonthlyRent] = useState(room.room_type?.price ?? 0)
+  const [monthlyRent, setMonthlyRent] = useState(room.price ?? 0)
   const [paymentDay, setPaymentDay] = useState(new Date().getDate())
   const [waTemplate, setWaTemplate] = useState("")
   const [loading, setLoading] = useState(false)
@@ -204,8 +204,12 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
           <h2 className="text-lg font-semibold text-gray-900">
             Nuevo contrato — Hab. {room.identifier}
           </h2>
-          {room.room_type && (
-            <p className="text-sm text-gray-500">{room.room_type.label} · Q{room.room_type.price.toLocaleString()}/mes</p>
+          {(room.room_type?.label || room.price != null) && (
+            <p className="text-sm text-gray-500">
+              {room.room_type?.label}
+              {room.room_type?.label && room.price != null ? " · " : ""}
+              {room.price != null ? `Q${room.price.toLocaleString()}/mes` : ""}
+            </p>
           )}
         </div>
 
@@ -260,7 +264,7 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
               />
               <p className="text-xs text-gray-400 mt-1">
-                Prellenado con el precio de lista{room.room_type ? ` (Q${room.room_type.price.toLocaleString()})` : ""} — ajústalo si este inquilino paga diferente.
+                Prellenado con el precio de la habitación{room.price != null ? ` (Q${room.price.toLocaleString()})` : ""} — ajústalo si este inquilino paga diferente.
               </p>
             </div>
             <div>

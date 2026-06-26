@@ -27,12 +27,13 @@ function daysUntilPayment(paymentDay: number): number {
 }
 
 function RoomCard({
-  room, roomTypes, onStatusChange, onTypeChange, onContractCreated, onContractEnded,
+  room, roomTypes, onStatusChange, onTypeChange, onPriceChange, onContractCreated, onContractEnded,
 }: {
   room: RoomWithDetails
   roomTypes: RoomType[]
   onStatusChange: (id: string, status: Room["status"]) => Promise<void>
   onTypeChange: (id: string, typeId: string | null) => Promise<void>
+  onPriceChange: (id: string, price: number | null) => Promise<void>
   onContractCreated: () => void
   onContractEnded: (roomId: string) => Promise<void>
 }) {
@@ -45,6 +46,7 @@ function RoomCard({
   const [showCredentials, setShowCredentials] = useState(false)
   const [showPhotos, setShowPhotos] = useState(false)
   const [photoCount, setPhotoCount] = useState(room.room_photos?.length ?? 0)
+  const [priceInput, setPriceInput] = useState(room.price != null ? String(room.price) : "")
   const [newCredentials, setNewCredentials] = useState<{ email: string; password: string; name: string; phone: string; contractId: string } | null>(null)
 
   const payDays = contract ? daysUntilPayment(contract.payment_day) : null
@@ -55,6 +57,13 @@ function RoomCard({
   }
   async function handleType(v: string) {
     setBusy(true); await onTypeChange(room.id, v || null); setBusy(false)
+  }
+  async function handlePriceBlur() {
+    const trimmed = priceInput.trim()
+    const next = trimmed === "" ? null : Math.max(0, Math.round(Number(trimmed)))
+    if (trimmed !== "" && Number.isNaN(next)) { setPriceInput(room.price != null ? String(room.price) : ""); return }
+    if (next === (room.price ?? null)) return
+    setBusy(true); await onPriceChange(room.id, next); setBusy(false)
   }
   function waReminder() {
     if (!tenant || !contract) return
@@ -79,7 +88,7 @@ function RoomCard({
           </span>
         </div>
 
-        {/* Type selector */}
+        {/* Type selector (solo etiqueta — ya no lleva precio) */}
         <select
           value={room.type_id ?? ""}
           onChange={(e) => handleType(e.target.value)}
@@ -87,9 +96,25 @@ function RoomCard({
         >
           <option value="">— Sin tipo asignado —</option>
           {roomTypes.map((t) => (
-            <option key={t.id} value={t.id}>{t.label} · Q{t.price.toLocaleString()}</option>
+            <option key={t.id} value={t.id}>{t.label}</option>
           ))}
         </select>
+
+        {/* Precio de lista por habitación (se muestra en el front office) */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-500 flex-shrink-0">Precio Q</span>
+          <input
+            type="number"
+            min={0}
+            inputMode="numeric"
+            value={priceInput}
+            onChange={(e) => setPriceInput(e.target.value)}
+            onBlur={handlePriceBlur}
+            placeholder="Sin precio"
+            aria-label={`Precio de la habitación ${room.identifier}`}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#b64532]/40 w-full"
+          />
+        </div>
 
         {/* Tenant info */}
         {tenant && contract && (
@@ -174,7 +199,7 @@ function RoomCard({
         <ContractInfoDialog
           contract={contract}
           roomIdentifier={room.identifier}
-          listPrice={room.room_type?.price ?? null}
+          listPrice={room.price ?? null}
           onClose={() => setShowContractInfo(false)}
           onUpdated={onContractCreated}
         />
@@ -255,6 +280,14 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
     logAudit(`Cambió tipo — Hab. ${room?.identifier ?? id} → ${type?.label ?? "sin tipo"}`, "room", room?.identifier)
   }
 
+  async function handlePriceChange(id: string, price: number | null) {
+    const { createClient } = await import("@/lib/supabase/client")
+    await createClient().from("rooms").update({ price }).eq("id", id)
+    setRooms((p) => p.map((r) => r.id === id ? { ...r, price } : r))
+    const room = rooms.find((r) => r.id === id)
+    logAudit(`Cambió precio — Hab. ${room?.identifier ?? id} → ${price != null ? `Q${price.toLocaleString()}` : "sin precio"}`, "room", room?.identifier)
+  }
+
   async function handleContractEnded(roomId: string) {
     const room = rooms.find((r) => r.id === roomId)
     const contract = (room as RoomWithDetails)?.contract
@@ -298,7 +331,7 @@ export default function RoomGrid({ propertyId }: { propertyId: string }) {
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
       {rooms.map((room) => (
         <RoomCard key={room.id} room={room} roomTypes={roomTypes}
-          onStatusChange={handleStatusChange} onTypeChange={handleTypeChange}
+          onStatusChange={handleStatusChange} onTypeChange={handleTypeChange} onPriceChange={handlePriceChange}
           onContractCreated={loadRooms} onContractEnded={handleContractEnded} />
       ))}
     </div>

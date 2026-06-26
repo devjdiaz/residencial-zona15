@@ -11,28 +11,32 @@ const FALLBACK_ROOMS = [
     id: "fallback-1",
     identifier: "A",
     status: "available" as const,
+    price: 3000,
     property: { name: "El Maestro", slug: "el-maestro" },
-    room_type: { slug: "loft", label: "Loft de 2 Niveles", price: 3000 },
+    room_type: { slug: "loft", label: "Loft de 2 Niveles" },
   },
   {
     id: "fallback-2",
     identifier: "5",
     status: "available" as const,
+    price: 2500,
     property: { name: "El Maestro", slug: "el-maestro" },
-    room_type: { slug: "grande", label: "Habitacion Grande", price: 2500 },
+    room_type: { slug: "grande", label: "Habitacion Grande" },
   },
   {
     id: "fallback-3",
     identifier: "12",
     status: "available" as const,
+    price: 2000,
     property: { name: "Tecun", slug: "tecun" },
-    room_type: { slug: "estandar", label: "Habitacion Estandar", price: 2000 },
+    room_type: { slug: "estandar", label: "Habitacion Estandar" },
   },
 ]
 
 type AvailRoom = Pick<Room, "id" | "identifier" | "status"> & {
+  price?: number | null
   property?: { name: string; slug: string }[]
-  room_type?: { slug: string; label: string; price: number }[]
+  room_type?: { slug: string; label: string }[]
   room_photos?: { storage_path: string }[]
 }
 
@@ -54,7 +58,7 @@ function RoomCard({ room }: { room: AvailRoom }) {
   const prop = Array.isArray(room.property) ? room.property[0] : room.property
   const type = Array.isArray(room.room_type) ? room.room_type[0] : room.room_type
   const slug = type?.slug ?? "estandar"
-  const waMsg = `Hola Julio, me interesa la Habitacion ${room.identifier} (${type?.label ?? "habitacion"} - Q${type?.price?.toLocaleString()}/mes) en Residencial ${prop?.name ?? "El Maestro"}.`
+  const waMsg = `Hola Julio, me interesa la Habitacion ${room.identifier} (${type?.label ?? "habitacion"}${room.price != null ? ` - Q${room.price.toLocaleString()}/mes` : ""}) en Residencial ${prop?.name ?? "El Maestro"}.`
 
   return (
     <article className="room-card">
@@ -63,9 +67,11 @@ function RoomCard({ room }: { room: AvailRoom }) {
           <span className="live-dot" />
           Disponible
         </span>
-        <span className="price-chip">
-          Q{type?.price?.toLocaleString()}/mes
-        </span>
+        {room.price != null && (
+          <span className="price-chip">
+            Q{room.price.toLocaleString()}/mes
+          </span>
+        )}
         {photos.length > 0 ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -207,7 +213,7 @@ function PropertyCarousel({ title, rooms }: { title: string; rooms: AvailRoom[] 
   )
 }
 
-const QUERY = "id, identifier, status, property:properties(name,slug), room_type:room_types(slug, label, price), room_photos(storage_path)"
+const QUERY = "id, identifier, status, price, property:properties(name,slug), room_type:room_types(slug, label), room_photos(storage_path)"
 
 export default function AvailabilitySection() {
   const [rooms, setRooms] = useState<AvailRoom[]>(

@@ -38,6 +38,7 @@ export interface Room {
   property_id: string
   identifier: string
   type_id: string | null
+  price: number | null
   status: RoomStatus
   sort_order: number
   property?: Property
