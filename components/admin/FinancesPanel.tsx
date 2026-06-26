@@ -9,6 +9,8 @@ const INCOME_LABELS: Record<string, string> = {
   parking: "Parqueo",
   contract_signing: "Firma de contrato",
   deposit: "Depósito",
+  rent: "Renta",
+  other: "Otro cobro",
 }
 
 const EXPENSE_LABELS: Record<string, string> = {
@@ -38,6 +40,10 @@ export default function FinancesPanel() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [incomeExtras, setIncomeExtras] = useState<IncomeExtra[]>([])
+  // Cargos únicos (depósito/firma) de los contratos activos, SIN filtrar por fecha:
+  // se facturan en el primer mes del contrato, así que deben poder condonarse desde
+  // cualquier período (clave para inquilinos que ingresaron antes del sistema).
+  const [oneTimeExtras, setOneTimeExtras] = useState<IncomeExtra[]>([])
   const [recurringCharges, setRecurringCharges] = useState<{ id: string; type: string; amount: number; room_id: string; contract_id: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [contracts, setContracts] = useState<(Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[]>([])
@@ -108,6 +114,14 @@ export default function FinancesPanel() {
       setIncomeExtras(extras ?? [])
       const variableIncome = (extras ?? []).reduce((sum, e) => sum + e.amount, 0)
 
+      // Cargos únicos (depósito/firma) de todos los contratos activos, sin importar la fecha
+      const { data: oneTime } = await supabase
+        .from("income_extras")
+        .select("*")
+        .in("contract_id", activeContractIds.length ? activeContractIds : ["none"])
+        .in("type", ["deposit", "contract_signing"])
+      setOneTimeExtras(oneTime ?? [])
+
       const { data: exp } = await supabase
         .from("expenses")
         .select("*")
@@ -123,12 +137,11 @@ export default function FinancesPanel() {
         .eq("period_month", period)
       setMonthlyPayments(payments ?? [])
 
-      // Condonaciones de este período
+      // Condonaciones de los contratos activos (todas; el "por cobrar" filtra por período)
       const { data: waiverRows } = await supabase
         .from("charge_waivers")
         .select("*")
         .in("contract_id", activeContractIds.length ? activeContractIds : ["none"])
-        .eq("period_month", period)
       setWaivers((waiverRows as ChargeWaiver[]) ?? [])
 
       const cobrado = (payments ?? []).reduce((sum, p) => sum + p.amount, 0)
@@ -138,7 +151,7 @@ export default function FinancesPanel() {
         const base = c.monthly_rent ?? c.room?.room_type?.price ?? 0
         const rc = (recurring ?? []).filter((r) => r.contract_id === c.id).reduce((s, r) => s + r.amount, 0)
         const waivedExpected = ((waiverRows as ChargeWaiver[]) ?? [])
-          .filter((w) => w.contract_id === c.id && (w.concept === "rent" || w.recurring_charge_id))
+          .filter((w) => w.contract_id === c.id && w.period_month === period && (w.concept === "rent" || w.recurring_charge_id))
           .reduce((s, w) => s + w.amount, 0)
         const expectedNeto = Math.max(0, base + rc - waivedExpected)
         const pagado = (payments ?? []).filter((p) => p.contract_id === c.id).reduce((s, p) => s + p.amount, 0)
@@ -267,9 +280,16 @@ export default function FinancesPanel() {
     recurringCharges.filter((r) => r.contract_id === c.id).forEach((r) => {
       opts.push({ value: `recurring:${r.id}`, label: `${INCOME_LABELS[r.type] ?? r.type} (recurrente)`, amount: r.amount, concept: r.type as WaiverConcept, recurringId: r.id })
     })
-    incomeExtras.filter((e) => e.contract_id === c.id).forEach((e) => {
+    // Cargos únicos (depósito/firma) — disponibles desde cualquier período
+    oneTimeExtras.filter((e) => e.contract_id === c.id).forEach((e) => {
       opts.push({ value: `extra:${e.id}`, label: `${INCOME_LABELS[e.type] ?? e.type} (único)`, amount: e.amount, concept: e.type as WaiverConcept, extraId: e.id })
     })
+    // Otros cargos únicos del período (parqueo, persona adicional, etc.), sin duplicar depósito/firma
+    incomeExtras
+      .filter((e) => e.contract_id === c.id && !["deposit", "contract_signing"].includes(e.type))
+      .forEach((e) => {
+        opts.push({ value: `extra:${e.id}`, label: `${INCOME_LABELS[e.type] ?? e.type} (único)`, amount: e.amount, concept: e.type as WaiverConcept, extraId: e.id })
+      })
     opts.push({ value: "other", label: "Otro cobro", amount: 0, concept: "other" })
     return opts
   }
@@ -298,10 +318,18 @@ export default function FinancesPanel() {
         setWaiveBusy(false); return
       }
 
+      // Los cargos únicos (depósito/firma) se facturan en el primer mes del contrato;
+      // su condonación debe registrarse en ese mes para verse en el estado de cuenta del
+      // inquilino. El resto (renta/recurrentes/otro) se registra en el período seleccionado.
+      const isOneTimeConcept = opt.concept === "deposit" || opt.concept === "contract_signing"
+      const waiverPeriod = isOneTimeConcept && waiveContract.start_date
+        ? waiveContract.start_date.slice(0, 7)
+        : period
+
       const { data, error } = await supabase.from("charge_waivers").insert({
         contract_id: waiveContract.id,
         room_id: waiveContract.room_id,
-        period_month: period,
+        period_month: waiverPeriod,
         concept: opt.concept,
         recurring_charge_id: opt.recurringId ?? null,
         income_extra_id: opt.extraId ?? null,
@@ -312,7 +340,7 @@ export default function FinancesPanel() {
       if (error) { console.error("charge_waivers insert", error); alert(`Error al condonar: ${error.message}${error.code ? ` [${error.code}]` : ""}${error.details ? ` — ${error.details}` : ""}${error.hint ? ` (${error.hint})` : ""}`); setWaiveBusy(false); return }
 
       logAudit(
-        `Condonó ${opt.label.toLowerCase()} Q${amount.toLocaleString()} — Hab. ${waiveContract.room?.identifier} · ${period}${waiveForm.reason ? ` (${waiveForm.reason})` : ""}`,
+        `Condonó ${opt.label.toLowerCase()} Q${amount.toLocaleString()} — Hab. ${waiveContract.room?.identifier} · ${waiverPeriod}${waiveForm.reason ? ` (${waiveForm.reason})` : ""}`,
         "waiver", waiveContract.room?.identifier
       )
 
@@ -481,9 +509,14 @@ export default function FinancesPanel() {
                 const payment = monthlyPayments.find((p) => p.contract_id === c.id)
                 const base = c.monthly_rent ?? c.room?.room_type?.price ?? 0
                 const rc = recurringCharges.filter((r) => r.contract_id === c.id).reduce((s, r) => s + r.amount, 0)
-                const contractWaivers = waivers.filter((w) => w.contract_id === c.id)
+                // Chips: cargos únicos (depósito/firma/otro) de cualquier mes + renta/recurrentes del mes activo
+                const oneTimeConcepts = ["deposit", "contract_signing", "other"]
+                const contractWaivers = waivers.filter((w) =>
+                  w.contract_id === c.id &&
+                  (oneTimeConcepts.includes(w.concept) || w.period_month === period)
+                )
                 const waivedExpected = contractWaivers
-                  .filter((w) => w.concept === "rent" || w.recurring_charge_id)
+                  .filter((w) => w.period_month === period && (w.concept === "rent" || w.recurring_charge_id))
                   .reduce((s, w) => s + w.amount, 0)
                 const expectedNeto = Math.max(0, base + rc - waivedExpected)
                 return (
