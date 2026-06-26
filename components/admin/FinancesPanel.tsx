@@ -22,6 +22,13 @@ const EXPENSE_LABELS: Record<string, string> = {
   water: "Agua",
 }
 
+// Ordena habitaciones por identificador: primero los números en orden ascendente
+// (1, 2, 3… 10, 11) y, cuando se acaban, las letras en orden alfabético (A, B, C).
+// localeCompare con numeric trata los dígitos como número y los coloca antes que las letras.
+function byRoomIdentifier(a?: string, b?: string): number {
+  return (a ?? "").localeCompare(b ?? "", "es", { numeric: true, sensitivity: "base" })
+}
+
 interface Summary {
   cobrado: number
   porCobrar: number
@@ -97,8 +104,9 @@ export default function FinancesPanel() {
         .in("room_id", propertyRoomIds.length ? propertyRoomIds : ["none"])
         .eq("status", "active") as { data: (Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[] | null }
 
-      setContracts(contractsData ?? [])
-      const activeContractIds = (contractsData ?? []).map((c) => c.id)
+      const sortedContracts = (contractsData ?? []).slice().sort((a, b) => byRoomIdentifier(a.room?.identifier, b.room?.identifier))
+      setContracts(sortedContracts)
+      const activeContractIds = sortedContracts.map((c) => c.id)
 
       const { data: recurring } = await supabase
         .from("recurring_charges")
