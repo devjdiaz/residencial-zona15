@@ -545,7 +545,16 @@ export default function TenantDashboard() {
   const recurringTotal = recurringItems.reduce((s, c) => s + c.amount, 0)
   const oneTimeTotal = oneTimeItems.reduce((s, c) => s + c.amount, 0)
   const totalBruto = (info?.price ?? 0) + recurringTotal + (isFirstMonth ? oneTimeTotal : 0)
-  const waiversThisMonth = waivers.filter((w) => w.period_month === activePeriod)
+  // Cargos únicos (depósito/firma/otro) y su condonación se facturan en el primer mes
+  // del contrato. Si la admin registró la condonación en un mes anterior al primer mes
+  // (típico en inquilinos que ingresaron antes del sistema: contrato a futuro, condonación
+  // hecha hoy), igual la mostramos junto a los cargos únicos en el primer mes.
+  const ONE_TIME_WAIVER_CONCEPTS = ["deposit", "contract_signing", "other"]
+  const waiversThisMonth = waivers.filter((w) => {
+    if (w.period_month === activePeriod) return true
+    if (isFirstMonth && ONE_TIME_WAIVER_CONCEPTS.includes(w.concept) && w.period_month <= startMonth) return true
+    return false
+  })
   const waiverTotal = waiversThisMonth.reduce((s, w) => s + w.amount, 0)
   const totalToPay = Math.max(0, totalBruto - waiverTotal)
 
