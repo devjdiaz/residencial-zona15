@@ -32,6 +32,10 @@ create index if not exists notifications_unread_idx on notifications (read, crea
 alter table push_subscriptions enable row level security;
 alter table notifications      enable row level security;
 
+-- Grants (las tablas nuevas no heredan el grant global de schema.sql).
+grant all on table push_subscriptions to anon, authenticated, service_role;
+grant all on table notifications      to anon, authenticated, service_role;
+
 -- push_subscriptions: el admin gestiona las suyas.
 drop policy if exists "push_subs_admin_own" on push_subscriptions;
 create policy "push_subs_admin_own" on push_subscriptions
