@@ -8,6 +8,24 @@ function periodLabel(period: string): string {
   return `${MONTH_NAMES[Number(month) - 1]} ${year}`
 }
 
+// Supabase Storage rechaza claves con espacios y ciertos caracteres (~, paréntesis, etc.)
+// con "Invalid key". Limpiamos el nombre dejando solo caracteres seguros.
+function sanitizeFileName(name: string): string {
+  const dot = name.lastIndexOf(".")
+  const base = dot > 0 ? name.slice(0, dot) : name
+  const ext = dot > 0 ? name.slice(dot + 1) : ""
+  const clean = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")      // quita acentos
+      .replace(/[^a-zA-Z0-9._-]+/g, "_")    // resto -> guion bajo
+      .replace(/_+/g, "_")                  // colapsa repetidos
+      .replace(/^[._-]+|[._-]+$/g, "")      // recorta extremos
+  const safeBase = clean(base) || "archivo"
+  const safeExt = ext ? clean(ext) : ""
+  return safeExt ? `${safeBase}.${safeExt.toLowerCase()}` : safeBase
+}
+
 interface ContractInfo {
   identifier: string
   propertyName: string
@@ -327,7 +345,7 @@ export default function TenantDashboard() {
         throw new Error(`Este comprobante ya fue enviado para ${periodLabel(duplicate.period_month)}. Sube el comprobante del mes que vas a pagar.`)
       }
 
-      const path = `${user.id}/${activePeriod}/${file.name}`
+      const path = `${user.id}/${activePeriod}/${sanitizeFileName(file.name)}`
       const { error: storageErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: true })
       if (storageErr) throw storageErr
 
@@ -471,7 +489,7 @@ export default function TenantDashboard() {
       const roomId = p?.room_id as string
 
       const fileHash = await computeHash(file)
-      const path = `${user.id}/abonos/${activePeriod}/${crypto.randomUUID()}-${file.name}`
+      const path = `${user.id}/abonos/${activePeriod}/${crypto.randomUUID()}-${sanitizeFileName(file.name)}`
       const { error: storageErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: false })
       if (storageErr) throw storageErr
 
