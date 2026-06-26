@@ -23,6 +23,8 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose, onPe
   const [receipts, setReceipts] = useState<PaymentReceipt[]>([])
   const [loading, setLoading] = useState(true)
   const [recurringCharges, setRecurringCharges] = useState<{ amount: number }[]>([])
+  // Precio de lista del tipo de habitación: fallback cuando el contrato no tiene renta negociada
+  const [listPrice, setListPrice] = useState(0)
   const [duplicateWarnings, setDuplicateWarnings] = useState<
     Record<string, { tenantName: string; periodMonth: string }[]>
   >({})
@@ -47,6 +49,14 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose, onPe
         .select("amount")
         .eq("contract_id", contract.id)
       setRecurringCharges(rcData ?? [])
+
+      // Precio de lista del tipo de la habitación (fallback si monthly_rent es null)
+      const { data: room } = await supabase
+        .from("rooms")
+        .select("room_type:room_types(price)")
+        .eq("id", contract.room_id)
+        .single()
+      setListPrice((room?.room_type as { price?: number } | null)?.price ?? 0)
 
       // Detección de comprobantes duplicados entre todos los inquilinos
       const hashes = (data ?? []).map((r) => r.file_hash).filter(Boolean) as string[]
@@ -92,8 +102,8 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose, onPe
       .update({ verified: true, rejected: false, rejection_reason: null })
       .in("id", ids)
 
-    // 2. Monto por mes = renta mensual + cargos recurrentes
-    const base = contract.monthly_rent ?? 0
+    // 2. Monto por mes = renta (negociada o precio de lista) + cargos recurrentes
+    const base = contract.monthly_rent ?? listPrice ?? 0
     const rcTotal = recurringCharges.reduce((s, r) => s + r.amount, 0)
     const monthAmount = base + rcTotal
 
@@ -145,8 +155,8 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose, onPe
     logAudit(`Rechazó comprobante — Hab. ${roomIdentifier} · ${periods}${reason ? ` (${reason})` : ""}`, "receipt", roomIdentifier)
   }
 
-  // Monto confirmado por mes (renta + recurrentes)
-  const monthAmount = (contract.monthly_rent ?? 0) + recurringCharges.reduce((s, r) => s + r.amount, 0)
+  // Monto confirmado por mes (renta negociada o precio de lista + recurrentes)
+  const monthAmount = (contract.monthly_rent ?? listPrice ?? 0) + recurringCharges.reduce((s, r) => s + r.amount, 0)
 
   // Agrupa los comprobantes: una transferencia multi-mes (mismo payment_group_id) se muestra
   // como una sola unidad; los pagos de un mes quedan individuales.
