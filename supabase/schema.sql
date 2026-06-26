@@ -151,6 +151,7 @@ create table payment_receipts (
   rejected           boolean not null default false,
   rejection_reason   text,
   verified           boolean not null default false,
+  payment_group_id   uuid,   -- agrupa varios meses pagados en una sola transferencia (mismo archivo)
   unique (contract_id, period_month)
 );
 

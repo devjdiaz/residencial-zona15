@@ -46,6 +46,7 @@ interface Receipt {
   file_hash: string | null
   rejected: boolean
   rejection_reason: string | null
+  payment_group_id: string | null
 }
 
 interface Charge { type: string; amount: number }
@@ -107,6 +108,9 @@ export default function TenantDashboard() {
   const [uploadNotice, setUploadNotice] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState<string>("")
+  // Pago de varios meses en una sola transferencia (mismo comprobante)
+  const [multiMonth, setMultiMonth] = useState(false)
+  const [endPeriod, setEndPeriod] = useState<string>("")
   const fileRef = useRef<HTMLInputElement>(null)
   const abonoFileRef = useRef<HTMLInputElement>(null)
 
@@ -312,8 +316,20 @@ export default function TenantDashboard() {
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!activePeriod) { setUploadError("Selecciona el mes que vas a pagar."); return }
-    const wasReplace = receipts.some((r) => r.period_month === activePeriod)
+    // Meses que cubre este comprobante: rango si es pago de varios meses, si no el mes activo
+    const months = multiMonth ? selectedMonths : (activePeriod ? [activePeriod] : [])
+    if (months.length === 0) { setUploadError("Selecciona el mes que vas a pagar."); return }
+    if (multiMonth && months.length < 2) {
+      setUploadError("Selecciona un rango de al menos dos meses, o desactiva «pagar varios meses».")
+      return
+    }
+    // No permitir incluir meses ya verificados
+    const verifiedInRange = months.filter((m) => receipts.find((r) => r.period_month === m)?.verified)
+    if (verifiedInRange.length) {
+      setUploadError(`Ya tienes pago verificado para ${verifiedInRange.map(periodLabel).join(", ")}. Ajusta el rango.`)
+      return
+    }
+    const wasReplace = months.some((m) => receipts.some((r) => r.period_month === m))
     setUploading(true)
     setUploadError(null)
     setUploadNotice(null)
@@ -331,7 +347,8 @@ export default function TenantDashboard() {
 
       const contractId = (profile as unknown as Record<string, unknown>)?.contract_id as string
 
-      // Duplicate detection: block if same file already submitted for a different period
+      // Anti-fraude: bloquear si el mismo archivo ya se usó para un mes FUERA de este rango.
+      // Dentro del rango (misma transferencia) sí se permite reutilizarlo.
       const fileHash = await computeHash(file)
       const { data: existingReceipts } = await supabase
         .from("payment_receipts")
@@ -339,35 +356,44 @@ export default function TenantDashboard() {
         .eq("contract_id", contractId)
         .not("file_hash", "is", null)
       const duplicate = (existingReceipts ?? []).find(
-        (r) => r.file_hash === fileHash && r.period_month !== activePeriod
+        (r) => r.file_hash === fileHash && !months.includes(r.period_month)
       )
       if (duplicate) {
-        throw new Error(`Este comprobante ya fue enviado para ${periodLabel(duplicate.period_month)}. Sube el comprobante del mes que vas a pagar.`)
+        throw new Error(`Este comprobante ya fue enviado para ${periodLabel(duplicate.period_month)}. Sube el comprobante de los meses que vas a pagar.`)
       }
 
-      const path = `${user.id}/${activePeriod}/${sanitizeFileName(file.name)}`
+      // Un solo archivo; las filas de los meses del rango lo comparten y se agrupan
+      const groupId = months.length > 1 ? crypto.randomUUID() : null
+      const folder = groupId ? `grupo-${groupId}` : months[0]
+      const path = `${user.id}/${folder}/${sanitizeFileName(file.name)}`
       const { error: storageErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: true })
       if (storageErr) throw storageErr
 
+      const rows = months.map((m) => ({
+        tenant_profile_id: user.id,
+        contract_id: contractId,
+        period_month: m,
+        storage_path: path,
+        file_hash: fileHash,
+        payment_group_id: groupId,
+        verified: false,
+        rejected: false,
+        rejection_reason: null,
+      }))
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: rec, error: recErr } = await (supabase as any)
+      const { data: recs, error: recErr } = await (supabase as any)
         .from("payment_receipts")
-        .upsert({
-          tenant_profile_id: user.id,
-          contract_id: contractId,
-          period_month: activePeriod,
-          storage_path: path,
-          file_hash: fileHash,
-          verified: false,
-          rejected: false,
-          rejection_reason: null,
-        }, { onConflict: "contract_id,period_month" })
+        .upsert(rows, { onConflict: "contract_id,period_month" })
         .select()
-        .single()
       if (recErr) throw recErr
 
-      setReceipts((prev) => [rec as Receipt, ...prev.filter((r) => r.period_month !== activePeriod)])
-      setUploadNotice(wasReplace ? "Comprobante reemplazado correctamente ✓" : "Comprobante subido correctamente ✓")
+      setReceipts((prev) => [...(recs as Receipt[]), ...prev.filter((r) => !months.includes(r.period_month))])
+      setUploadNotice(
+        months.length > 1
+          ? `Comprobante de ${months.length} meses (${periodLabel(months[0])} – ${periodLabel(months[months.length - 1])}) subido correctamente ✓`
+          : wasReplace ? "Comprobante reemplazado correctamente ✓" : "Comprobante subido correctamente ✓"
+      )
     } catch (err: unknown) {
       console.error("handleUpload", err)
       const msg = err instanceof Error
@@ -398,9 +424,13 @@ export default function TenantDashboard() {
         .eq("id", current.id)
       if (delErr) throw delErr
 
-      // El archivo solo importa junto a su row; si falla su borrado, ya quedó huérfano e invisible para admin.
-      const { error: storageErr } = await supabase.storage.from("receipts").remove([current.storage_path])
-      if (storageErr) console.error("handleDelete storage", storageErr)
+      // En un pago multi-mes varias filas comparten el mismo archivo; solo borrarlo del storage
+      // si ningún otro mes lo sigue referenciando.
+      const sharesFile = receipts.some((r) => r.id !== current.id && r.storage_path === current.storage_path)
+      if (!sharesFile) {
+        const { error: storageErr } = await supabase.storage.from("receipts").remove([current.storage_path])
+        if (storageErr) console.error("handleDelete storage", storageErr)
+      }
 
       setReceipts((prev) => prev.filter((r) => r.period_month !== activePeriod))
       setUploadNotice("Comprobante eliminado ✓")
@@ -544,19 +574,41 @@ export default function TenantDashboard() {
   const isFirstMonth = startMonth === activePeriod
   const recurringTotal = recurringItems.reduce((s, c) => s + c.amount, 0)
   const oneTimeTotal = oneTimeItems.reduce((s, c) => s + c.amount, 0)
-  const totalBruto = (info?.price ?? 0) + recurringTotal + (isFirstMonth ? oneTimeTotal : 0)
   // Cargos únicos (depósito/firma/otro) y su condonación se facturan en el primer mes
   // del contrato. Si la admin registró la condonación en un mes anterior al primer mes
   // (típico en inquilinos que ingresaron antes del sistema: contrato a futuro, condonación
   // hecha hoy), igual la mostramos junto a los cargos únicos en el primer mes.
   const ONE_TIME_WAIVER_CONCEPTS = ["deposit", "contract_signing", "other"]
-  const waiversThisMonth = waivers.filter((w) => {
-    if (w.period_month === activePeriod) return true
-    if (isFirstMonth && ONE_TIME_WAIVER_CONCEPTS.includes(w.concept) && w.period_month <= startMonth) return true
-    return false
-  })
-  const waiverTotal = waiversThisMonth.reduce((s, w) => s + w.amount, 0)
-  const totalToPay = Math.max(0, totalBruto - waiverTotal)
+  const waiversForMonth = (period: string) => {
+    const first = startMonth === period
+    return waivers.filter((w) =>
+      w.period_month === period ||
+      (first && ONE_TIME_WAIVER_CONCEPTS.includes(w.concept) && w.period_month <= startMonth)
+    )
+  }
+  // Total neto a pagar de un mes (renta + recurrentes + únicos si es el primer mes − condonaciones)
+  const monthNet = (period: string) => {
+    const first = startMonth === period
+    const bruto = (info?.price ?? 0) + recurringTotal + (first ? oneTimeTotal : 0)
+    const w = waiversForMonth(period).reduce((s, x) => s + x.amount, 0)
+    return Math.max(0, bruto - w)
+  }
+
+  // Meses cubiertos por el comprobante (rango si es pago de varios meses)
+  const selectedMonths = (() => {
+    if (!activePeriod) return [] as string[]
+    if (!multiMonth || !endPeriod) return [activePeriod]
+    const i = contractMonths.indexOf(activePeriod)
+    const j = contractMonths.indexOf(endPeriod)
+    if (i === -1 || j === -1 || j < i) return [activePeriod]
+    return contractMonths.slice(i, j + 1)
+  })()
+
+  // Breakdown del mes activo (vista de un solo mes)
+  const waiversThisMonth = waiversForMonth(activePeriod)
+  const totalToPay = multiMonth
+    ? selectedMonths.reduce((s, m) => s + monthNet(m), 0)
+    : monthNet(activePeriod)
 
   // Abono del mes activo
   const abonoReq = abonoRequests.find((a) => a.period_month === activePeriod) ?? null
@@ -624,36 +676,54 @@ export default function TenantDashboard() {
         {info && (
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Total a pagar{activePeriod ? ` · ${periodLabel(activePeriod)}` : ""}</p>
-              {isFirstMonth && (
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+                Total a pagar{multiMonth && selectedMonths.length > 1
+                  ? ` · ${periodLabel(selectedMonths[0])} – ${periodLabel(selectedMonths[selectedMonths.length - 1])}`
+                  : activePeriod ? ` · ${periodLabel(activePeriod)}` : ""}
+              </p>
+              {selectedMonths.includes(startMonth) && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Primer pago</span>
               )}
             </div>
             <div className="space-y-1.5">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Renta {info.roomTypeLabel}</span>
-                <span className="text-gray-900">Q{info.price.toLocaleString()}</span>
-              </div>
-              {recurringItems.map((c, i) => (
-                <div key={`r-${i}`} className="flex justify-between text-sm">
-                  <span className="text-gray-500">{CHARGE_LABELS[c.type] ?? c.type}</span>
-                  <span className="text-gray-900">Q{c.amount.toLocaleString()}</span>
-                </div>
-              ))}
-              {isFirstMonth && oneTimeItems.map((c, i) => (
-                <div key={`o-${i}`} className="flex justify-between text-sm">
-                  <span className="text-gray-500">{CHARGE_LABELS[c.type] ?? c.type} <span className="text-xs text-gray-400">(único)</span></span>
-                  <span className="text-gray-900">Q{c.amount.toLocaleString()}</span>
-                </div>
-              ))}
-              {waiversThisMonth.map((w, i) => (
-                <div key={`w-${i}`} className="flex justify-between text-sm">
-                  <span className="text-green-700">{CHARGE_LABELS[w.concept] ?? w.concept} <span className="text-xs text-green-600">(condonado)</span></span>
-                  <span className="text-green-700">−Q{w.amount.toLocaleString()}</span>
-                </div>
-              ))}
+              {multiMonth && selectedMonths.length > 1 ? (
+                selectedMonths.map((m) => (
+                  <div key={`m-${m}`} className="flex justify-between text-sm">
+                    <span className="text-gray-500">
+                      {periodLabel(m)}
+                      {m === startMonth && <span className="text-xs text-gray-400"> (incluye depósito/firma)</span>}
+                    </span>
+                    <span className="text-gray-900">Q{monthNet(m).toLocaleString()}</span>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Renta {info.roomTypeLabel}</span>
+                    <span className="text-gray-900">Q{info.price.toLocaleString()}</span>
+                  </div>
+                  {recurringItems.map((c, i) => (
+                    <div key={`r-${i}`} className="flex justify-between text-sm">
+                      <span className="text-gray-500">{CHARGE_LABELS[c.type] ?? c.type}</span>
+                      <span className="text-gray-900">Q{c.amount.toLocaleString()}</span>
+                    </div>
+                  ))}
+                  {isFirstMonth && oneTimeItems.map((c, i) => (
+                    <div key={`o-${i}`} className="flex justify-between text-sm">
+                      <span className="text-gray-500">{CHARGE_LABELS[c.type] ?? c.type} <span className="text-xs text-gray-400">(único)</span></span>
+                      <span className="text-gray-900">Q{c.amount.toLocaleString()}</span>
+                    </div>
+                  ))}
+                  {waiversThisMonth.map((w, i) => (
+                    <div key={`w-${i}`} className="flex justify-between text-sm">
+                      <span className="text-green-700">{CHARGE_LABELS[w.concept] ?? w.concept} <span className="text-xs text-green-600">(condonado)</span></span>
+                      <span className="text-green-700">−Q{w.amount.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </>
+              )}
               <div className="flex justify-between pt-2 mt-1 border-t border-gray-100">
-                <span className="text-sm font-semibold text-gray-900">Total</span>
+                <span className="text-sm font-semibold text-gray-900">Total{multiMonth && selectedMonths.length > 1 ? ` · ${selectedMonths.length} meses` : ""}</span>
                 <span className="text-lg font-bold text-[#b64532]">Q{totalToPay.toLocaleString()}</span>
               </div>
             </div>
@@ -667,10 +737,15 @@ export default function TenantDashboard() {
           {/* Selector de mes a pagar */}
           {contractMonths.length > 0 && (
             <div className="mb-4">
-              <label className="block text-sm text-gray-600 mb-1.5">¿Qué mes vas a pagar?</label>
+              <label className="block text-sm text-gray-600 mb-1.5">{multiMonth ? "¿Desde qué mes?" : "¿Qué mes vas a pagar?"}</label>
               <select
                 value={activePeriod}
-                onChange={(e) => { setSelectedPeriod(e.target.value); setUploadError(null); setUploadNotice(null) }}
+                onChange={(e) => {
+                  setSelectedPeriod(e.target.value)
+                  setUploadError(null); setUploadNotice(null)
+                  // Si el "hasta" quedó antes del nuevo "desde", lo reajustamos
+                  if (endPeriod && endPeriod < e.target.value) setEndPeriod(e.target.value)
+                }}
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
               >
                 {contractMonths.map((m) => {
@@ -680,13 +755,51 @@ export default function TenantDashboard() {
                   )
                 })}
               </select>
-              {coverage && (
+
+              {multiMonth && (
+                <div className="mt-3">
+                  <label className="block text-sm text-gray-600 mb-1.5">¿Hasta qué mes?</label>
+                  <select
+                    value={endPeriod || activePeriod}
+                    onChange={(e) => { setEndPeriod(e.target.value); setUploadError(null); setUploadNotice(null) }}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                  >
+                    {contractMonths.filter((m) => m >= activePeriod).map((m) => {
+                      const labels = { verified: "✓ pagado", pending: "pendiente", rejected: "✕ rechazado", unpaid: "sin pagar" }
+                      return (
+                        <option key={m} value={m}>{periodLabel(m)} — {labels[periodStatus(m)]}</option>
+                      )
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {/* Toggle: pagar varios meses en una sola transferencia */}
+              <label className="flex items-center gap-2 mt-3 text-sm text-gray-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={multiMonth}
+                  onChange={(e) => {
+                    setMultiMonth(e.target.checked)
+                    setEndPeriod(e.target.checked ? activePeriod : "")
+                    setUploadError(null); setUploadNotice(null)
+                  }}
+                  className="rounded border-gray-300 text-[#b64532] focus:ring-[#b64532]/40"
+                />
+                Pagar varios meses en una sola transferencia
+              </label>
+
+              {multiMonth && selectedMonths.length > 1 ? (
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Cubre {selectedMonths.length} meses: {periodLabel(selectedMonths[0])} – {periodLabel(selectedMonths[selectedMonths.length - 1])}. Sube un solo comprobante por el total.
+                </p>
+              ) : coverage && (
                 <p className="text-xs text-gray-400 mt-1.5">Cubre del {coverage.start} al {coverage.end}</p>
               )}
             </div>
           )}
 
-          {hasSelectedMonth ? (() => {
+          {(!multiMonth && hasSelectedMonth) ? (() => {
             const current = receipts.find((r) => r.period_month === activePeriod)
             if (current?.rejected) {
               return (
@@ -747,7 +860,14 @@ export default function TenantDashboard() {
             )
           })() : (
             <div>
-              <p className="text-sm text-gray-600 mb-3">Sube tu comprobante de pago de {activePeriod ? periodLabel(activePeriod) : "este mes"}.</p>
+              <p className="text-sm text-gray-600 mb-3">
+                {multiMonth && selectedMonths.length > 1
+                  ? `Sube un comprobante por el total de ${selectedMonths.length} meses (${periodLabel(selectedMonths[0])} – ${periodLabel(selectedMonths[selectedMonths.length - 1])}).`
+                  : `Sube tu comprobante de pago de ${activePeriod ? periodLabel(activePeriod) : "este mes"}.`}
+              </p>
+              {multiMonth && selectedMonths.some((m) => receipts.some((r) => r.period_month === m && !r.verified)) && (
+                <p className="text-xs text-amber-600 mb-3">Ya hay comprobantes pendientes en este rango; al subir se reemplazarán por este.</p>
+              )}
               <button
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading}
@@ -766,8 +886,8 @@ export default function TenantDashboard() {
           )}
         </div>
 
-        {/* Pagar en partes (abono) */}
-        {info && activePeriod && !hasSelectedMonth && (
+        {/* Pagar en partes (abono) — solo para pago de un mes */}
+        {info && activePeriod && !hasSelectedMonth && !multiMonth && (
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-3">Pagar en partes (abono)</p>
 
