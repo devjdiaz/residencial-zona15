@@ -41,7 +41,7 @@ export async function GET(
       has_parking, parking_vehicle_type, parking_vehicle_brand,
       parking_vehicle_line, parking_vehicle_color, parking_vehicle_plate,
       tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(name, email, phone, phone_alt, dpi),
-      room:rooms(identifier, room_type:room_types(price), property:properties(name, slug))
+      room:rooms(identifier, price, property:properties(name, slug))
     `)
     .eq("id", contractId)
     .single()
@@ -53,7 +53,6 @@ export async function GET(
   const tenant   = unwrap(contract.tenant_profile)
   const room     = unwrap(contract.room)
   const prop     = unwrap(room?.property)
-  const roomType = unwrap(room?.room_type)
   const propSlug = prop?.slug ?? "maestro"
 
   // Depósito
@@ -107,7 +106,7 @@ export async function GET(
     "{FECHA_INICIO}":       fmt(contract.start_date),
     "{FECHA_FIN}":          contract.end_date ? fmt(contract.end_date) : "",
     "{DURACION_MESES}":     String(contract.duration_months ?? 6),
-    "{RENTA}":              (contract.monthly_rent ?? roomType?.price ?? 0).toLocaleString("es-GT"),
+    "{RENTA}":              (contract.monthly_rent ?? room?.price ?? 0).toLocaleString("es-GT"),
     "{DIA_PAGO}":           String(contract.payment_day),
     "{BANCO}":              bank.bank,
     "{NUM_CUENTA}":         bank.account,

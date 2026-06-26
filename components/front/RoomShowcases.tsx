@@ -8,8 +8,9 @@ import WaIcon from "./WaIcon"
 interface RoomListing {
   id: string
   identifier: string
+  price: number | null
   property: { name: string }
-  room_type: { price: number; label: string; slug: string } | null
+  room_type: { label: string; slug: string } | null
   room_photos: { storage_path: string; display_order: number }[]
 }
 
@@ -22,7 +23,7 @@ async function getAvailableListings(): Promise<RoomListing[] | null> {
     const sb = await createClient()
     const { data } = await sb
       .from("rooms")
-      .select("id, identifier, property:properties(name), room_type:room_types(price,label,slug), room_photos(storage_path,display_order)")
+      .select("id, identifier, price, property:properties(name), room_type:room_types(label,slug), room_photos(storage_path,display_order)")
       .eq("status", "available")
       .order("sort_order")
     const withPhotos = ((data ?? []) as unknown as RoomListing[]).filter(
@@ -45,7 +46,7 @@ function ListingCard({ room }: { room: RoomListing }) {
     .sort((a, b) => a.display_order - b.display_order)
     .map((p) => roomPhotoUrl(p.storage_path))
 
-  const price = room.room_type?.price
+  const price = room.price
   const typeLabel = room.room_type?.label ?? "Habitación"
   const waMsg = `Hola, me interesa la Hab. ${room.identifier} en ${room.property.name}${price ? ` (Q${price.toLocaleString()}/mes)` : ""}. ¿Está disponible?`
 

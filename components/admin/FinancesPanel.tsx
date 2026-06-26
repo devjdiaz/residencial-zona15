@@ -53,12 +53,12 @@ export default function FinancesPanel() {
   const [oneTimeExtras, setOneTimeExtras] = useState<IncomeExtra[]>([])
   const [recurringCharges, setRecurringCharges] = useState<{ id: string; type: string; amount: number; room_id: string; contract_id: string }[]>([])
   const [loading, setLoading] = useState(false)
-  const [contracts, setContracts] = useState<(Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[]>([])
+  const [contracts, setContracts] = useState<(Contract & { room: { identifier: string; price?: number | null }; tenant_profile: TenantProfile })[]>([])
   const [monthlyPayments, setMonthlyPayments] = useState<{ contract_id: string; amount: number; source: string }[]>([])
   const [waivers, setWaivers] = useState<ChargeWaiver[]>([])
 
   // Diálogo de condonación
-  const [waiveContract, setWaiveContract] = useState<(Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile }) | null>(null)
+  const [waiveContract, setWaiveContract] = useState<(Contract & { room: { identifier: string; price?: number | null }; tenant_profile: TenantProfile }) | null>(null)
   const [waiveForm, setWaiveForm] = useState<{ target: string; amount: string; reason: string }>({ target: "", amount: "", reason: "" })
   const [waiveBusy, setWaiveBusy] = useState(false)
 
@@ -100,9 +100,9 @@ export default function FinancesPanel() {
 
       const { data: contractsData } = await supabase
         .from("contracts")
-        .select("*, tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(*), room:rooms(identifier, property_id, room_type:room_types(price))")
+        .select("*, tenant_profile:tenant_profiles!contracts_tenant_profile_id_fkey(*), room:rooms(identifier, property_id, price)")
         .in("room_id", propertyRoomIds.length ? propertyRoomIds : ["none"])
-        .eq("status", "active") as { data: (Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile })[] | null }
+        .eq("status", "active") as { data: (Contract & { room: { identifier: string; price?: number | null }; tenant_profile: TenantProfile })[] | null }
 
       const sortedContracts = (contractsData ?? []).slice().sort((a, b) => byRoomIdentifier(a.room?.identifier, b.room?.identifier))
       setContracts(sortedContracts)
@@ -156,7 +156,7 @@ export default function FinancesPanel() {
 
       // Por cobrar: por contrato, resta condonaciones (renta/recurrentes) y lo ya pagado en el ledger
       const porCobrar = (contractsData ?? []).reduce((sum, c) => {
-        const base = c.monthly_rent ?? c.room?.room_type?.price ?? 0
+        const base = c.monthly_rent ?? c.room?.price ?? 0
         const rc = (recurring ?? []).filter((r) => r.contract_id === c.id).reduce((s, r) => s + r.amount, 0)
         const waivedExpected = ((waiverRows as ChargeWaiver[]) ?? [])
           .filter((w) => w.contract_id === c.id && w.period_month === period && (w.concept === "rent" || w.recurring_charge_id))
@@ -265,7 +265,7 @@ export default function FinancesPanel() {
     setSummary((prev) => {
       if (!prev) return prev
       const delta = wasUnpaid ? amount : amount - (existing?.amount ?? 0)
-      const base = contract.monthly_rent ?? contract.room?.room_type?.price ?? 0
+      const base = contract.monthly_rent ?? contract.room?.price ?? 0
       const rc = recurringCharges.filter((r) => r.contract_id === newMonthlyIncome.contractId).reduce((s, r) => s + r.amount, 0)
       return {
         ...prev,
@@ -280,8 +280,8 @@ export default function FinancesPanel() {
   }
 
   // Opciones condonables de un contrato en el período seleccionado
-  function waiveTargets(c: Contract & { room: { room_type?: { price: number } } }) {
-    const base = c.monthly_rent ?? c.room?.room_type?.price ?? 0
+  function waiveTargets(c: Contract & { room: { price?: number | null } }) {
+    const base = c.monthly_rent ?? c.room?.price ?? 0
     const opts: { value: string; label: string; amount: number; concept: WaiverConcept; recurringId?: string; extraId?: string }[] = [
       { value: "rent", label: `Renta del mes`, amount: base, concept: "rent" },
     ]
@@ -302,7 +302,7 @@ export default function FinancesPanel() {
     return opts
   }
 
-  function openWaive(c: Contract & { room: { identifier: string; room_type?: { price: number } }; tenant_profile: TenantProfile }) {
+  function openWaive(c: Contract & { room: { identifier: string; price?: number | null }; tenant_profile: TenantProfile }) {
     const first = waiveTargets(c)[0]
     setWaiveContract(c)
     setWaiveForm({ target: first.value, amount: String(first.amount), reason: "" })
@@ -454,7 +454,7 @@ export default function FinancesPanel() {
                       value={newMonthlyIncome.contractId}
                       onChange={(e) => {
                         const c = contracts.find((c) => c.id === e.target.value)
-                        const base = c ? (c.monthly_rent ?? c.room?.room_type?.price ?? 0) : 0
+                        const base = c ? (c.monthly_rent ?? c.room?.price ?? 0) : 0
                         const rc = recurringCharges
                           .filter((r) => r.contract_id === e.target.value)
                           .reduce((s, r) => s + r.amount, 0)
@@ -515,7 +515,7 @@ export default function FinancesPanel() {
                 <p className="text-xs text-gray-400 py-4 text-center">Sin contratos activos este mes</p>
               ) : contracts.map((c) => {
                 const payment = monthlyPayments.find((p) => p.contract_id === c.id)
-                const base = c.monthly_rent ?? c.room?.room_type?.price ?? 0
+                const base = c.monthly_rent ?? c.room?.price ?? 0
                 const rc = recurringCharges.filter((r) => r.contract_id === c.id).reduce((s, r) => s + r.amount, 0)
                 // Chips: cargos únicos (depósito/firma/otro) de cualquier mes + renta/recurrentes del mes activo
                 const oneTimeConcepts = ["deposit", "contract_signing", "other"]

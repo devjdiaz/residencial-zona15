@@ -9,7 +9,7 @@ import ContractPDFViewer from "./ContractPDFViewer"
 interface Props {
   contract: Contract & { tenant_profile?: TenantProfile }
   roomIdentifier: string
-  listPrice?: number | null  // precio de lista del tipo de habitación (fallback si el contrato no tiene renta propia)
+  listPrice?: number | null  // precio de lista de la habitación (fallback si el contrato no tiene renta propia)
   onClose: () => void
   onUpdated: () => void
 }
