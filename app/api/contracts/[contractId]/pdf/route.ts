@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import ContractPDF, { replacePlaceholders } from "@/components/ContractPDF"
 import type { PmNode, Vars } from "@/components/ContractPDF"
 import { createElement } from "react"
-import { createServiceClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 
 function unwrap<T>(v: T | T[] | null | undefined): T | null {
   if (v == null) return null
@@ -26,7 +26,11 @@ export async function GET(
   // Útil sobre todo en móvil, donde la barra nativa del visor no siempre ofrece descargar.
   const forceDownload = _req.nextUrl.searchParams.get("download") === "1"
 
-  const sb = await createServiceClient()
+  // Cliente service_role REAL (sin cookies): el inquilino abre este link a veces
+  // logueado en el portal; con un cliente basado en cookies, sus consultas usarían
+  // su token de inquilino y el RLS bloquearía contract_template (solo-admin),
+  // generando un contrato en blanco. Este cliente salta el RLS siempre.
+  const sb = createServiceRoleClient()
 
   const { data: contract, error } = await sb
     .from("contracts")
@@ -69,6 +73,17 @@ export async function GET(
   const banks    = (tpl.banks    as Record<string, { bank: string; account: string; holder: string; type: string }>) ?? {}
   const bank     = banks[propSlug] ?? banks["maestro"] ?? { bank: "", account: "", holder: "", type: "" }
   const bodyJson = (tpl.body_json as PmNode | null) ?? null
+
+  // Blindaje: si el cuerpo del contrato no está configurado en contract_template,
+  // NO generamos un PDF en blanco (solo firmas). Mejor un error explícito para que
+  // el inquilino no reciba un contrato vacío y el admin se entere.
+  const bodyEmpty = !bodyJson || !(bodyJson.content?.length)
+  if (bodyEmpty) {
+    return NextResponse.json(
+      { error: "Plantilla de contrato no configurada (body_json vacío). Avisar al administrador." },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
+    )
+  }
 
   // Cláusula de depósito dinámica
   const clausulaDeposito = depositPaid
@@ -131,6 +146,7 @@ export async function GET(
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `${disposition}; filename="contrato-${room?.identifier ?? contractId}.pdf"`,
+      "Cache-Control": "no-store",
     },
   })
 }
