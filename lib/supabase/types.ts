@@ -97,6 +97,8 @@ export interface PaymentReceipt {
   verified: boolean
   rejected: boolean
   rejection_reason: string | null
+  // Agrupa varios meses pagados en una sola transferencia (mismo archivo). null = pago de un mes.
+  payment_group_id: string | null
 }
 
 export interface Expense {
