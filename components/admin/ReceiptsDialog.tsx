@@ -155,6 +155,48 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose, onPe
     logAudit(`Rechazó comprobante — Hab. ${roomIdentifier} · ${periods}${reason ? ` (${reason})` : ""}`, "receipt", roomIdentifier)
   }
 
+  // Elimina un comprobante (o toda una transferencia multi-mes). Borra también el pago
+  // registrado en finanzas si estaba verificado, y el archivo del bucket si ninguna otra
+  // fila lo sigue compartiendo. Solo admin (RLS lo permite).
+  async function deleteUnit(rows: PaymentReceipt[]) {
+    if (rows.length === 0) return
+    const ids = rows.map((r) => r.id)
+    const wasVerified = rows.some((r) => r.verified)
+    const periods = rows.map((r) => r.period_month).sort()
+    const periodsLabel = periods.map(periodLabel).join(", ")
+    const msg = `¿Eliminar el comprobante de ${periodsLabel}?`
+      + (wasVerified ? " Esto también quitará el pago ya registrado en finanzas." : "")
+      + " Esta acción no se puede deshacer."
+    if (!window.confirm(msg)) return
+
+    const { createClient } = await import("@/lib/supabase/client")
+    const supabase = createClient()
+
+    // 1. Quitar el pago registrado (si estaba verificado) ANTES de borrar la fila: el FK
+    //    receipt_id es ON DELETE SET NULL, así que después perderíamos el vínculo.
+    await supabase.from("monthly_payments").delete().in("receipt_id", ids)
+
+    // 2. Borrar la(s) fila(s) del comprobante.
+    const { error: delErr } = await supabase.from("payment_receipts").delete().in("id", ids)
+    if (delErr) { alert(`No se pudo eliminar el comprobante: ${delErr.message}`); return }
+
+    // 3. Storage: en multi-mes varias filas comparten el mismo archivo. Borrar cada path
+    //    solo si ninguna fila restante (fuera de las borradas) lo sigue referenciando.
+    const deletedIds = new Set(ids)
+    const paths = Array.from(new Set(rows.map((r) => r.storage_path)))
+    const pathsToRemove = paths.filter((p) => !receipts.some((r) => !deletedIds.has(r.id) && r.storage_path === p))
+    if (pathsToRemove.length) {
+      const { error: storageErr } = await supabase.storage.from("receipts").remove(pathsToRemove)
+      if (storageErr) console.error("deleteUnit storage", storageErr)
+    }
+
+    // 4. Estado local + auditoría.
+    const next = receipts.filter((r) => !deletedIds.has(r.id))
+    setReceipts(next)
+    onPendingChange?.(countPending(next))
+    logAudit(`Eliminó comprobante — Hab. ${roomIdentifier} · ${periods.join(", ")}`, "receipt", roomIdentifier)
+  }
+
   // Monto confirmado por mes (renta negociada o precio de lista + recurrentes)
   const monthAmount = (contract.monthly_rent ?? listPrice ?? 0) + recurringCharges.reduce((s, r) => s + r.amount, 0)
 
@@ -266,6 +308,11 @@ export default function ReceiptsDialog({ contract, roomIdentifier, onClose, onPe
                         </button>
                       </div>
                     )}
+                    <button onClick={() => deleteUnit(u.rows)} title="Eliminar comprobante"
+                      aria-label="Eliminar comprobante"
+                      className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-50 text-gray-400 border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
+                      🗑
+                    </button>
                   </div>
                 </div>
               )
