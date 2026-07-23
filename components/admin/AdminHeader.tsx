@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import AccountDialog from "./AccountDialog"
+import AccountDialog from "../AccountDialog"
 import NotificationsBell from "./NotificationsBell"
 
 export default function AdminHeader() {

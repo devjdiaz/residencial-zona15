@@ -1,5 +1,6 @@
 "use client"
 import { useState } from "react"
+import { EyeIcon, EyeOffIcon } from "lucide-react"
 
 interface Props {
   email: string
@@ -9,6 +10,7 @@ interface Props {
 export default function AccountDialog({ email, onClose }: Props) {
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
@@ -53,13 +55,20 @@ export default function AccountDialog({ email, onClose }: Props) {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Nueva contraseña</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
-                placeholder="••••••••" autoComplete="new-password" />
+              <div className="relative">
+                <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+                  placeholder="••••••••" autoComplete="new-password" />
+                <button type="button" onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 transition-colors">
+                  {showPassword ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Confirmar contraseña</label>
-              <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+              <input type={showPassword ? "text" : "password"} value={confirm} onChange={(e) => setConfirm(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
                 placeholder="••••••••" autoComplete="new-password" />
             </div>
