@@ -1,5 +1,7 @@
 "use client"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { KeyRoundIcon } from "lucide-react"
+import AccountDialog from "@/components/AccountDialog"
 
 const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
@@ -107,6 +109,8 @@ export default function TenantDashboard() {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadNotice, setUploadNotice] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [tenantEmail, setTenantEmail] = useState("")
+  const [showAccount, setShowAccount] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState<string>("")
   // Pago de varios meses en una sola transferencia (mismo comprobante)
   const [multiMonth, setMultiMonth] = useState(false)
@@ -184,6 +188,7 @@ export default function TenantDashboard() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      setTenantEmail(user.email ?? "")
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: profile } = await (supabase as any)
@@ -626,12 +631,21 @@ export default function TenantDashboard() {
               style={{ background: "#b64532", fontFamily: "Georgia, serif" }}>M</div>
             <span className="font-semibold text-gray-900 text-sm">Mi habitación</span>
           </div>
-          <button onClick={handleLogout} disabled={loggingOut}
-            className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-            Salir
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowAccount(true)}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+              <KeyRoundIcon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Cambiar contraseña</span>
+            </button>
+            <button onClick={handleLogout} disabled={loggingOut}
+              className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+              Salir
+            </button>
+          </div>
         </div>
       </header>
+
+      {showAccount && <AccountDialog email={tenantEmail} onClose={() => setShowAccount(false)} />}
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
         {/* Contract info */}
