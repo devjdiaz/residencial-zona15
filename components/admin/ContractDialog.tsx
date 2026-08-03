@@ -117,10 +117,28 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
       // 2. Cerrar cualquier contrato activo previo de esta habitación para que
       //    nunca queden dos activos a la vez (causaba comprobantes "invisibles").
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: previousContracts } = await (supabase as any).from("contracts")
+        .select("id, tenant_profile_id")
+        .eq("room_id", room.id)
+        .eq("status", "active")
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from("contracts")
         .update({ status: "ended" })
         .eq("room_id", room.id)
         .eq("status", "active")
+
+      // 2b. Bloquear el login del inquilino saliente (no se borra: conserva su
+      // historial/recibos, pero evita que quede una cuenta huérfana con acceso
+      // vigente — causaba reportes de "no puedo subir comprobante" con la cuenta vieja).
+      for (const prev of (previousContracts ?? []) as { id: string; tenant_profile_id: string }[]) {
+        if (prev.tenant_profile_id === tenantId) continue
+        await fetch("/api/admin/ban-tenant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tenantId: prev.tenant_profile_id }),
+        })
+      }
 
       // 3. Create contract (tenant_profile now exists)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
