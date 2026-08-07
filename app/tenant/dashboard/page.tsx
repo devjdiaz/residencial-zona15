@@ -28,6 +28,165 @@ function sanitizeFileName(name: string): string {
   return safeExt ? `${safeBase}.${safeExt.toLowerCase()}` : safeBase
 }
 
+// —— Diagnóstico de fallos al subir comprobantes ————————————————————————
+// El navegador reporta CUALQUIER fallo de red como "Failed to fetch" (Chrome/Android),
+// "Load failed" (Safari iOS) o "NetworkError…" (Firefox), sin decir qué llamada falló.
+// Etiquetamos cada paso de la subida y traducimos el error a algo accionable, más un
+// detalle técnico copiable que el inquilino puede mandarnos por WhatsApp.
+
+// Espejo del límite del bucket `receipts` en Supabase (Storage → File size limit).
+// Con la compresión de abajo, en la práctica nada legítimo se acerca a este tope.
+const MAX_FILE_MB = 50
+
+type UploadStep = "sesion" | "contrato" | "historial" | "archivo" | "registro" | "solicitud" | "eliminar"
+
+const STEP_LABELS: Record<UploadStep, string> = {
+  sesion: "verificar tu sesión",
+  contrato: "leer los datos de tu contrato",
+  historial: "revisar tus comprobantes anteriores",
+  archivo: "subir el archivo",
+  registro: "guardar el comprobante",
+  solicitud: "enviar la solicitud",
+  eliminar: "eliminar el comprobante",
+}
+
+// Regla de negocio (mes duplicado, sesión vencida, sin contrato): el mensaje ya está
+// escrito para el inquilino, se muestra tal cual y sin detalle técnico.
+class TenantError extends Error {}
+
+function formatMB(bytes: number): string {
+  return `${(bytes / 1048576).toFixed(1)} MB`
+}
+
+// Un fallo de red (DNS, TLS, CORS, conexión cortada, bloqueo del proveedor) llega como
+// TypeError sin status. Todo lo que traiga status HTTP es una respuesta del servidor.
+function isNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const m = err.message.toLowerCase()
+  return (
+    err.name === "TypeError" ||
+    m.includes("failed to fetch") ||
+    m.includes("load failed") ||
+    m.includes("networkerror") ||
+    m.includes("network request failed")
+  )
+}
+
+function httpStatusOf(err: unknown): number | null {
+  if (!err || typeof err !== "object") return null
+  const e = err as { statusCode?: unknown; status?: unknown }
+  const n = Number(e.statusCode ?? e.status)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+function rawMessageOf(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message)
+  return String(err)
+}
+
+// Revisión previa: lo que podemos rechazar sin siquiera tocar la red.
+function validateReceiptFile(file: File): string | null {
+  if (file.size === 0) {
+    return "El archivo llegó vacío (0 bytes). Vuelve a tomar la captura o a descargar el comprobante de tu banco, y súbelo de nuevo."
+  }
+  if (file.size > MAX_FILE_MB * 1048576) {
+    return `El archivo pesa ${formatMB(file.size)} y el máximo permitido es ${MAX_FILE_MB} MB. Toma una captura de pantalla del comprobante (pesa mucho menos que la foto original) y sube esa.`
+  }
+  return null
+}
+
+// —— Compresión en el navegador ————————————————————————————————————————
+// Una foto de celular pesa 8-12 MB y sobre datos móviles inestables la subida se corta
+// a medio camino ("Failed to fetch"). Un comprobante se lee perfecto a 2000px, así que
+// lo encogemos antes de subir. El hash anti-fraude se calcula sobre el archivo ORIGINAL
+// (ver handleUpload), de modo que la detección de duplicados no depende de esto.
+
+const MAX_IMAGE_DIMENSION = 2000
+const COMPRESS_ABOVE_BYTES = 1.5 * 1048576
+const JPEG_QUALITY = 0.85
+
+async function compressImage(file: File): Promise<{ file: File; compressed: boolean }> {
+  if (!file.type.startsWith("image/") || file.size <= COMPRESS_ABOVE_BYTES) {
+    return { file, compressed: false }
+  }
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height))
+    const width = Math.round(bitmap.width * scale)
+    const height = Math.round(bitmap.height * scale)
+    const canvas = document.createElement("canvas")
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext("2d")
+    if (!ctx) { bitmap.close(); return { file, compressed: false } }
+    ctx.drawImage(bitmap, 0, 0, width, height)
+    bitmap.close()
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY)
+    )
+    // Una captura PNG chica puede crecer al pasar a JPEG: en ese caso dejamos el original.
+    if (!blob || blob.size >= file.size) return { file, compressed: false }
+    const base = file.name.replace(/\.[^.]+$/, "") || "comprobante"
+    return { file: new File([blob], `${base}.jpg`, { type: "image/jpeg" }), compressed: true }
+  } catch {
+    // Formato que el navegador no sabe decodificar (HEIC viejo, etc.): subimos el original.
+    return { file, compressed: false }
+  }
+}
+
+interface UploadFailure { message: string; details: string | null }
+
+function describeUploadError(err: unknown, step: UploadStep, file: File | null): UploadFailure {
+  if (err instanceof TenantError) return { message: err.message, details: null }
+
+  const stepLabel = STEP_LABELS[step]
+  const status = httpStatusOf(err)
+  const raw = rawMessageOf(err)
+  const online = typeof navigator !== "undefined" ? navigator.onLine : true
+
+  let message: string
+  if (status === 413) {
+    message = `El servidor rechazó el archivo por tamaño${file ? ` (${formatMB(file.size)})` : ""}. Sube una captura de pantalla del comprobante en vez de la foto o el PDF original.`
+  } else if (status === 401 || status === 403) {
+    message = `Tu sesión ya no es válida (error ${status}) al ${stepLabel}. Toca «Salir», vuelve a iniciar sesión e intenta de nuevo.`
+  } else if (status === 409) {
+    message = `Ya existe un comprobante registrado para ese mes (error 409). Recarga la página para ver el estado actualizado.`
+  } else if (status && status >= 500) {
+    message = `El servidor respondió con un error ${status} al ${stepLabel}. El problema no es tu teléfono ni tu conexión: espera unos minutos e intenta otra vez.`
+  } else if (isNetworkError(err)) {
+    if (!online) {
+      message = `Tu teléfono está sin conexión a internet (falló al ${stepLabel}). Conéctate a wifi o datos y vuelve a intentar.`
+    } else if (step === "archivo") {
+      message = `La conexión se cortó mientras se subía el archivo${file ? ` (${formatMB(file.size)})` : ""}. Pasa con archivos pesados o señal inestable: prueba con una captura de pantalla más liviana, o desde otra red.`
+    } else {
+      message = `No se pudo conectar con el servidor al ${stepLabel}. Revisa tu conexión y vuelve a intentar; si sigue igual, mándanos los detalles de abajo.`
+    }
+  } else if (raw) {
+    message = `Falló al ${stepLabel}: ${raw}`
+  } else {
+    message = `Falló al ${stepLabel} por un error desconocido. Mándanos los detalles de abajo.`
+  }
+
+  const errObj = (err && typeof err === "object" ? err : {}) as Record<string, unknown>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const conn = typeof navigator !== "undefined" ? (navigator as any).connection : undefined
+  const details = [
+    `Paso: ${step} — ${stepLabel}`,
+    `Error: ${err instanceof Error ? err.name : typeof err}: ${raw}`,
+    status ? `HTTP: ${status}` : null,
+    errObj.code ? `Código: ${String(errObj.code)}` : null,
+    errObj.details ? `Detalle: ${String(errObj.details)}` : null,
+    errObj.hint ? `Sugerencia: ${String(errObj.hint)}` : null,
+    file ? `Archivo: ${file.name} · ${formatMB(file.size)} · ${file.type || "tipo desconocido"}` : null,
+    `Conexión: ${online ? "en línea" : "SIN CONEXIÓN"}${conn?.effectiveType ? ` · ${conn.effectiveType}` : ""}`,
+    `Fecha: ${new Date().toISOString()}`,
+    `Navegador: ${typeof navigator !== "undefined" ? navigator.userAgent : "?"}`,
+  ].filter(Boolean).join("\n")
+
+  return { message, details }
+}
+
 interface ContractInfo {
   identifier: string
   propertyName: string
@@ -96,6 +255,47 @@ const CHARGE_LABELS: Record<string, string> = {
   other: "Otro cobro",
 }
 
+// Mensaje de error + detalle técnico copiable, para que el inquilino nos lo pueda
+// reenviar tal cual en vez de decir solo "me sale failed to fetch".
+function ErrorPanel({ message, details }: { message: string; details: string | null }) {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  async function copyDetails() {
+    if (!details) return
+    try {
+      await navigator.clipboard.writeText(details)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    } catch {
+      setOpen(true) // sin permiso de portapapeles: que lo seleccione a mano
+    }
+  }
+
+  return (
+    <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+      <p className="text-xs text-red-700 leading-relaxed">{message}</p>
+      {details && (
+        <>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+            <button type="button" onClick={() => setOpen((o) => !o)} className="text-xs text-red-600 underline">
+              {open ? "Ocultar detalles" : "Ver detalles técnicos"}
+            </button>
+            <button type="button" onClick={copyDetails} className="text-xs text-red-600 underline">
+              {copied ? "Copiado ✓" : "Copiar y enviar a la administradora"}
+            </button>
+          </div>
+          {open && (
+            <pre className="mt-2 p-2 bg-white border border-red-100 rounded-lg text-[10px] leading-relaxed text-red-800 whitespace-pre-wrap break-words select-all overflow-x-auto">
+              {details}
+            </pre>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function TenantDashboard() {
   const [info, setInfo] = useState<ContractInfo | null>(null)
   const [receipts, setReceipts] = useState<Receipt[]>([])
@@ -105,8 +305,10 @@ export default function TenantDashboard() {
   const [abonoRequests, setAbonoRequests] = useState<AbonoReq[]>([])
   const [abonoPayments, setAbonoPayments] = useState<AbonoPay[]>([])
   const [uploading, setUploading] = useState(false)
+  const [uploadStage, setUploadStage] = useState<"comprimir" | "subir">("subir")
   const [deleting, setDeleting] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadErrorDetails, setUploadErrorDetails] = useState<string | null>(null)
   const [uploadNotice, setUploadNotice] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
   const [tenantEmail, setTenantEmail] = useState("")
@@ -124,6 +326,7 @@ export default function TenantDashboard() {
   const [abonoPayAmount, setAbonoPayAmount] = useState("")
   const [abonoBusy, setAbonoBusy] = useState(false)
   const [abonoError, setAbonoError] = useState<string | null>(null)
+  const [abonoErrorDetails, setAbonoErrorDetails] = useState<string | null>(null)
 
   // Reportes de problemas
   const [reportCtx, setReportCtx] = useState<{ contractId: string; roomId: string; propertyId: string; tenantName: string } | null>(null)
@@ -278,6 +481,15 @@ export default function TenantDashboard() {
     load()
   }, [])
 
+  // Optimizar una foto grande toma un par de segundos en un celular lento: que se note
+  // que está trabajando y no que se colgó.
+  const busyText = uploadStage === "comprimir" ? "Optimizando imagen…" : "Subiendo…"
+
+  // Errores de validación: mensaje solo, sin detalle técnico que copiar.
+  function showUploadError(msg: string) { setUploadError(msg); setUploadErrorDetails(null) }
+  function clearUploadFeedback() { setUploadError(null); setUploadErrorDetails(null); setUploadNotice(null) }
+  function showAbonoError(msg: string | null) { setAbonoError(msg); setAbonoErrorDetails(null) }
+
   async function submitReport(e: React.FormEvent) {
     e.preventDefault()
     if (!reportText.trim() || !reportCtx) return
@@ -311,6 +523,11 @@ export default function TenantDashboard() {
   }
 
   async function computeHash(file: File): Promise<string> {
+    // crypto.subtle solo existe en contexto seguro (https). Sin esta guarda, el fallo
+    // sale como TypeError y se confundiría con un error de red.
+    if (typeof crypto === "undefined" || !crypto.subtle) {
+      throw new TenantError("Tu navegador bloqueó el procesamiento del archivo. Abre la página con https en Chrome o Safari actualizado (no dentro de otra app) e intenta de nuevo.")
+    }
     const buffer = await file.arrayBuffer()
     const hashBuffer = await crypto.subtle.digest("SHA-256", buffer)
     return Array.from(new Uint8Array(hashBuffer))
@@ -323,57 +540,84 @@ export default function TenantDashboard() {
     if (!file) return
     // Meses que cubre este comprobante: rango si es pago de varios meses, si no el mes activo
     const months = multiMonth ? selectedMonths : (activePeriod ? [activePeriod] : [])
-    if (months.length === 0) { setUploadError("Selecciona el mes que vas a pagar."); return }
+    if (months.length === 0) { showUploadError("Selecciona el mes que vas a pagar."); return }
     if (multiMonth && months.length < 2) {
-      setUploadError("Selecciona un rango de al menos dos meses, o desactiva «pagar varios meses».")
+      showUploadError("Selecciona un rango de al menos dos meses, o desactiva «pagar varios meses».")
       return
     }
     // No permitir incluir meses ya verificados
     const verifiedInRange = months.filter((m) => receipts.find((r) => r.period_month === m)?.verified)
     if (verifiedInRange.length) {
-      setUploadError(`Ya tienes pago verificado para ${verifiedInRange.map(periodLabel).join(", ")}. Ajusta el rango.`)
+      showUploadError(`Ya tienes pago verificado para ${verifiedInRange.map(periodLabel).join(", ")}. Ajusta el rango.`)
       return
     }
     const wasReplace = months.some((m) => receipts.some((r) => r.period_month === m))
+    // Lo que podemos rechazar sin tocar la red, con un mensaje exacto
+    const fileProblem = validateReceiptFile(file)
+    if (fileProblem) {
+      showUploadError(fileProblem)
+      if (fileRef.current) fileRef.current.value = ""
+      return
+    }
     setUploading(true)
-    setUploadError(null)
-    setUploadNotice(null)
+    setUploadStage("subir")
+    clearUploadFeedback()
+    // Paso actual: nos dice cuál de las llamadas de red fue la que falló
+    let step: UploadStep = "sesion"
+    // El archivo que realmente viaja (comprimido o no); lo usamos al reportar errores
+    let toUpload = file
     try {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No autenticado")
+      const { data: { user }, error: authErr } = await supabase.auth.getUser()
+      if (authErr) throw authErr
+      if (!user) throw new TenantError("Tu sesión expiró. Toca «Salir» y vuelve a iniciar sesión.")
 
-      const { data: profile } = await supabase
+      step = "contrato"
+      const { data: profile, error: profileErr } = await supabase
         .from("tenant_profiles")
         .select("contract_id")
         .eq("id", user.id)
         .single()
+      if (profileErr) throw profileErr
 
       const contractId = (profile as unknown as Record<string, unknown>)?.contract_id as string
+      if (!contractId) throw new TenantError("Tu usuario no tiene un contrato activo asociado. Avisa a la administradora para que lo revise.")
 
       // Anti-fraude: bloquear si el mismo archivo ya se usó para un mes FUERA de este rango.
       // Dentro del rango (misma transferencia) sí se permite reutilizarlo.
+      // Ojo: el hash va sobre el archivo ORIGINAL que eligió el inquilino, antes de
+      // comprimir, para que la compresión no altere la detección de duplicados.
       const fileHash = await computeHash(file)
-      const { data: existingReceipts } = await supabase
+      step = "historial"
+      const { data: existingReceipts, error: historyErr } = await supabase
         .from("payment_receipts")
         .select("period_month, file_hash")
         .eq("contract_id", contractId)
         .not("file_hash", "is", null)
+      if (historyErr) throw historyErr
       const duplicate = (existingReceipts ?? []).find(
         (r) => r.file_hash === fileHash && !months.includes(r.period_month)
       )
       if (duplicate) {
-        throw new Error(`Este comprobante ya fue enviado para ${periodLabel(duplicate.period_month)}. Sube el comprobante de los meses que vas a pagar.`)
+        throw new TenantError(`Este comprobante ya fue enviado para ${periodLabel(duplicate.period_month)}. Sube el comprobante de los meses que vas a pagar.`)
       }
+
+      // Encoger la imagen para que la subida sobreviva a una conexión móvil inestable
+      setUploadStage("comprimir")
+      const { file: compressedFile, compressed } = await compressImage(file)
+      toUpload = compressedFile
+      setUploadStage("subir")
 
       // Un solo archivo; las filas de los meses del rango lo comparten y se agrupan
       const groupId = months.length > 1 ? crypto.randomUUID() : null
       const folder = groupId ? `grupo-${groupId}` : months[0]
-      const path = `${user.id}/${folder}/${sanitizeFileName(file.name)}`
-      const { error: storageErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: true })
+      const path = `${user.id}/${folder}/${sanitizeFileName(toUpload.name)}`
+      step = "archivo"
+      const { error: storageErr } = await supabase.storage.from("receipts").upload(path, toUpload, { upsert: true })
       if (storageErr) throw storageErr
 
+      step = "registro"
       const rows = months.map((m) => ({
         tenant_profile_id: user.id,
         contract_id: contractId,
@@ -394,19 +638,17 @@ export default function TenantDashboard() {
       if (recErr) throw recErr
 
       setReceipts((prev) => [...(recs as Receipt[]), ...prev.filter((r) => !months.includes(r.period_month))])
+      const sizeNote = compressed ? ` (imagen optimizada: ${formatMB(file.size)} → ${formatMB(toUpload.size)})` : ""
       setUploadNotice(
-        months.length > 1
+        (months.length > 1
           ? `Comprobante de ${months.length} meses (${periodLabel(months[0])} – ${periodLabel(months[months.length - 1])}) subido correctamente ✓`
-          : wasReplace ? "Comprobante reemplazado correctamente ✓" : "Comprobante subido correctamente ✓"
+          : wasReplace ? "Comprobante reemplazado correctamente ✓" : "Comprobante subido correctamente ✓") + sizeNote
       )
     } catch (err: unknown) {
-      console.error("handleUpload", err)
-      const msg = err instanceof Error
-        ? err.message
-        : (err && typeof err === "object" && "message" in err)
-          ? String((err as { message: unknown }).message)
-          : "Error al subir el comprobante"
-      setUploadError(msg)
+      const { message, details } = describeUploadError(err, step, toUpload)
+      console.error("handleUpload", { step, err, details })
+      setUploadError(message)
+      setUploadErrorDetails(details)
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ""
@@ -418,8 +660,7 @@ export default function TenantDashboard() {
     if (!current || current.verified) return
     if (!window.confirm(`¿Eliminar el comprobante de ${periodLabel(current.period_month)}? Podrás subir otro.`)) return
     setDeleting(true)
-    setUploadError(null)
-    setUploadNotice(null)
+    clearUploadFeedback()
     try {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
@@ -440,13 +681,10 @@ export default function TenantDashboard() {
       setReceipts((prev) => prev.filter((r) => r.period_month !== activePeriod))
       setUploadNotice("Comprobante eliminado ✓")
     } catch (err: unknown) {
-      console.error("handleDelete", err)
-      const msg = err instanceof Error
-        ? err.message
-        : (err && typeof err === "object" && "message" in err)
-          ? String((err as { message: unknown }).message)
-          : "Error al eliminar el comprobante"
-      setUploadError(msg)
+      const { message, details } = describeUploadError(err, "eliminar", null)
+      console.error("handleDelete", { err, details })
+      setUploadError(message)
+      setUploadErrorDetails(details)
     } finally {
       setDeleting(false)
     }
@@ -454,23 +692,28 @@ export default function TenantDashboard() {
 
   async function submitAbono() {
     const amount = Number(abonoRequestAmount)
-    if (!activePeriod) { setAbonoError("Selecciona el mes."); return }
-    if (!(amount > 0)) { setAbonoError("Ingresa un monto válido."); return }
-    setAbonoBusy(true); setAbonoError(null)
+    if (!activePeriod) { showAbonoError("Selecciona el mes."); return }
+    if (!(amount > 0)) { showAbonoError("Ingresa un monto válido."); return }
+    setAbonoBusy(true); showAbonoError(null)
+    let step: UploadStep = "sesion"
     try {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No autenticado")
-      const { data: profile } = await supabase
+      const { data: { user }, error: authErr } = await supabase.auth.getUser()
+      if (authErr) throw authErr
+      if (!user) throw new TenantError("Tu sesión expiró. Toca «Salir» y vuelve a iniciar sesión.")
+      step = "contrato"
+      const { data: profile, error: profileErr } = await supabase
         .from("tenant_profiles")
         .select("contract_id, room_id")
         .eq("id", user.id)
         .single()
+      if (profileErr) throw profileErr
       const p = profile as unknown as Record<string, unknown> | null
       const contractId = p?.contract_id as string
       const roomId = p?.room_id as string
 
+      step = "solicitud"
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: req, error } = await (supabase as any)
         .from("abono_requests")
@@ -495,7 +738,10 @@ export default function TenantDashboard() {
       setShowAbonoForm(false)
       setAbonoRequestAmount("")
     } catch (err: unknown) {
-      setAbonoError(err instanceof Error ? err.message : "Error al enviar la solicitud")
+      const { message, details } = describeUploadError(err, step, null)
+      console.error("submitAbono", { step, err, details })
+      setAbonoError(message)
+      setAbonoErrorDetails(details)
     } finally {
       setAbonoBusy(false)
     }
@@ -505,29 +751,45 @@ export default function TenantDashboard() {
     const file = e.target.files?.[0]
     if (!file) return
     const req = abonoRequests.find((a) => a.period_month === activePeriod && a.status === "authorized")
-    if (!req) { setAbonoError("Aún no tienes un abono autorizado para este mes."); return }
+    if (!req) { showAbonoError("Aún no tienes un abono autorizado para este mes."); return }
     const amount = Number(abonoPayAmount)
-    if (!(amount > 0)) { setAbonoError("Ingresa el monto de este abono."); return }
-    setAbonoBusy(true); setAbonoError(null)
+    if (!(amount > 0)) { showAbonoError("Ingresa el monto de este abono."); return }
+    const fileProblem = validateReceiptFile(file)
+    if (fileProblem) {
+      showAbonoError(fileProblem)
+      if (abonoFileRef.current) abonoFileRef.current.value = ""
+      return
+    }
+    setAbonoBusy(true); showAbonoError(null)
+    let step: UploadStep = "sesion"
+    let toUpload = file
     try {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No autenticado")
-      const { data: profile } = await supabase
+      const { data: { user }, error: authErr } = await supabase.auth.getUser()
+      if (authErr) throw authErr
+      if (!user) throw new TenantError("Tu sesión expiró. Toca «Salir» y vuelve a iniciar sesión.")
+      step = "contrato"
+      const { data: profile, error: profileErr } = await supabase
         .from("tenant_profiles")
         .select("contract_id, room_id")
         .eq("id", user.id)
         .single()
+      if (profileErr) throw profileErr
       const p = profile as unknown as Record<string, unknown> | null
       const contractId = p?.contract_id as string
       const roomId = p?.room_id as string
 
+      // Hash del original (antes de comprimir), igual que en handleUpload
       const fileHash = await computeHash(file)
-      const path = `${user.id}/abonos/${activePeriod}/${crypto.randomUUID()}-${sanitizeFileName(file.name)}`
-      const { error: storageErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: false })
+      const { file: compressedFile } = await compressImage(file)
+      toUpload = compressedFile
+      const path = `${user.id}/abonos/${activePeriod}/${crypto.randomUUID()}-${sanitizeFileName(toUpload.name)}`
+      step = "archivo"
+      const { error: storageErr } = await supabase.storage.from("receipts").upload(path, toUpload, { upsert: false })
       if (storageErr) throw storageErr
 
+      step = "registro"
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: ap, error: apErr } = await (supabase as any)
         .from("abono_payments")
@@ -551,7 +813,10 @@ export default function TenantDashboard() {
       setAbonoPayments((prev) => [...prev, ap as AbonoPay])
       setAbonoPayAmount("")
     } catch (err: unknown) {
-      setAbonoError(err instanceof Error ? err.message : "Error al subir el abono")
+      const { message, details } = describeUploadError(err, step, toUpload)
+      console.error("handleAbonoUpload", { step, err, details })
+      setAbonoError(message)
+      setAbonoErrorDetails(details)
     } finally {
       setAbonoBusy(false)
       if (abonoFileRef.current) abonoFileRef.current.value = ""
@@ -756,7 +1021,7 @@ export default function TenantDashboard() {
                 value={activePeriod}
                 onChange={(e) => {
                   setSelectedPeriod(e.target.value)
-                  setUploadError(null); setUploadNotice(null)
+                  clearUploadFeedback()
                   // Si el "hasta" quedó antes del nuevo "desde", lo reajustamos
                   if (endPeriod && endPeriod < e.target.value) setEndPeriod(e.target.value)
                 }}
@@ -775,7 +1040,7 @@ export default function TenantDashboard() {
                   <label className="block text-sm text-gray-600 mb-1.5">¿Hasta qué mes?</label>
                   <select
                     value={endPeriod || activePeriod}
-                    onChange={(e) => { setEndPeriod(e.target.value); setUploadError(null); setUploadNotice(null) }}
+                    onChange={(e) => { setEndPeriod(e.target.value); clearUploadFeedback() }}
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
                   >
                     {contractMonths.filter((m) => m >= activePeriod).map((m) => {
@@ -796,7 +1061,7 @@ export default function TenantDashboard() {
                   onChange={(e) => {
                     setMultiMonth(e.target.checked)
                     setEndPeriod(e.target.checked ? activePeriod : "")
-                    setUploadError(null); setUploadNotice(null)
+                    clearUploadFeedback()
                   }}
                   className="rounded border-gray-300 text-[#b64532] focus:ring-[#b64532]/40"
                 />
@@ -834,7 +1099,7 @@ export default function TenantDashboard() {
                     disabled={uploading || deleting}
                     className="mt-3 w-full py-2.5 rounded-lg bg-[#b64532] text-white text-sm font-medium hover:bg-[#9a3727] transition-colors disabled:opacity-60"
                   >
-                    {uploading ? "Subiendo…" : "Subir comprobante corregido"}
+                    {uploading ? busyText : "Subir comprobante corregido"}
                   </button>
                   <button
                     onClick={handleDelete}
@@ -887,14 +1152,12 @@ export default function TenantDashboard() {
                 disabled={uploading}
                 className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 hover:border-[#b64532] hover:text-[#b64532] transition-colors disabled:opacity-50"
               >
-                {uploading ? "Subiendo…" : "📎 Seleccionar imagen o PDF"}
+                {uploading ? busyText : "📎 Seleccionar imagen o PDF"}
               </button>
             </div>
           )}
           <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleUpload} />
-          {uploadError && (
-            <p className="text-xs text-red-600 mt-2">{uploadError}</p>
-          )}
+          {uploadError && <ErrorPanel message={uploadError} details={uploadErrorDetails} />}
           {uploadNotice && !uploadError && (
             <p className="text-xs text-green-600 mt-2">{uploadNotice}</p>
           )}
@@ -913,7 +1176,7 @@ export default function TenantDashboard() {
                       ¿No tienes el monto completo? Solicita a la administradora pagar {periodLabel(activePeriod)} en partes.
                     </p>
                     <button
-                      onClick={() => { setShowAbonoForm(true); setAbonoError(null); setAbonoRequestAmount("") }}
+                      onClick={() => { setShowAbonoForm(true); showAbonoError(null); setAbonoRequestAmount("") }}
                       className="w-full py-2.5 rounded-lg border border-[#b64532] text-[#b64532] text-sm font-medium hover:bg-[#b64532]/5 transition-colors"
                     >
                       Solicitar abono
@@ -933,7 +1196,7 @@ export default function TenantDashboard() {
                         className="flex-1 py-2.5 rounded-lg bg-[#b64532] text-white text-sm font-medium hover:bg-[#9a3727] transition-colors disabled:opacity-60">
                         {abonoBusy ? "Enviando…" : "Enviar solicitud"}
                       </button>
-                      <button onClick={() => { setShowAbonoForm(false); setAbonoError(null) }}
+                      <button onClick={() => { setShowAbonoForm(false); showAbonoError(null) }}
                         className="px-4 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm">Cancelar</button>
                     </div>
                   </div>
@@ -1021,7 +1284,7 @@ export default function TenantDashboard() {
               </div>
             )}
 
-            {abonoError && <p className="text-xs text-red-600 mt-2">{abonoError}</p>}
+            {abonoError && <ErrorPanel message={abonoError} details={abonoErrorDetails} />}
           </div>
         )}
 
