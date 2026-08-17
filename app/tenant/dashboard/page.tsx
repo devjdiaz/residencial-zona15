@@ -194,6 +194,7 @@ interface ContractInfo {
   price: number
   startDate: string
   endDate: string
+  durationMonths: number
   paymentDay: number
   tenantName: string
 }
@@ -336,20 +337,40 @@ export default function TenantDashboard() {
   const [reportBusy, setReportBusy] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
 
-  // Meses del contrato (YYYY-MM) desde el mes de inicio hasta el mes de fin
+  // Meses cobrables (YYYY-MM): la ventana del CONTRATO EN CURSO, no toda la estadía.
+  //
+  // `startDate` puede ser histórico — la admin lo usa para llevar track de desde cuándo
+  // vive el inquilino (p. ej. 2023), aunque el contrato vigente sea de este año. Por eso
+  // la ventana se ancla al final: los últimos `durationMonths` meses hasta `endDate`.
+  // Nunca se sale de `startDate` (un contrato no puede cobrar antes de que empezara).
   const contractMonths = useMemo(() => {
     if (!info?.startDate || !info?.endDate) return [] as string[]
     const start = new Date(info.startDate + "T00:00:00")
     const end = new Date(info.endDate + "T00:00:00")
-    const months: string[] = []
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [] as string[]
+
+    const startMonth = new Date(start.getFullYear(), start.getMonth(), 1)
     const last = new Date(end.getFullYear(), end.getMonth(), 1)
+    if (last < startMonth) return [] as string[]
+
+    // Duración inválida o ausente → toda la estadía (comportamiento anterior).
+    const duration = info.durationMonths > 0 ? info.durationMonths : null
+    // Se resta `duration` (no `duration - 1`): el rango inicio–fin siempre fue inclusivo
+    // en ambos extremos, así que un contrato de N meses abarca N+1 meses de calendario.
+    // Mantenerlo así deja intacta la ventana de todos los contratos ya creados.
+    let first = duration
+      ? new Date(last.getFullYear(), last.getMonth() - duration, 1)
+      : startMonth
+    if (first < startMonth) first = startMonth
+
+    const months: string[] = []
+    const cursor = new Date(first)
     while (cursor <= last) {
       months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`)
       cursor.setMonth(cursor.getMonth() + 1)
     }
     return months
-  }, [info?.startDate, info?.endDate])
+  }, [info?.startDate, info?.endDate, info?.durationMonths])
 
   // Estado de un mes según los comprobantes
   function periodStatus(period: string): "verified" | "rejected" | "pending" | "unpaid" {
@@ -413,6 +434,7 @@ export default function TenantDashboard() {
           price: (contract?.monthly_rent as number) ?? (room?.price as number) ?? 0,
           startDate: (contract?.start_date as string) ?? "",
           endDate: (contract?.end_date as string) ?? "",
+          durationMonths: (contract?.duration_months as number) ?? 0,
           paymentDay: (contract?.payment_day as number) ?? 1,
           tenantName: (profile.name as string),
         })
@@ -839,8 +861,16 @@ export default function TenantDashboard() {
     return Math.ceil((due.getTime() - today.getTime()) / 86400000)
   })()
 
-  // Total a pagar: primer mes incluye depósito + firma; demás meses solo renta + recurrentes
-  const startMonth = info?.startDate ? info.startDate.slice(0, 7) : ""
+  const currentMonth = (() => {
+    const n = new Date()
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`
+  })()
+
+  // Total a pagar: primer mes incluye depósito + firma; demás meses solo renta + recurrentes.
+  // "Primer mes" = primer mes COBRABLE, no el mes de `start_date`: cuando la admin registra
+  // un inquilino antiguo, `start_date` es histórico (p. ej. 2023) y cae fuera de la ventana
+  // del contrato en curso — anclar ahí dejaría depósito y firma en un mes invisible.
+  const startMonth = contractMonths[0] ?? (info?.startDate ? info.startDate.slice(0, 7) : "")
   const isFirstMonth = startMonth === activePeriod
   const recurringTotal = recurringItems.reduce((s, c) => s + c.amount, 0)
   const oneTimeTotal = oneTimeItems.reduce((s, c) => s + c.amount, 0)
@@ -1012,6 +1042,16 @@ export default function TenantDashboard() {
         {/* Upload receipt */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-3">Comprobante de pago</p>
+
+          {/* Contrato vencido: el mes actual quedó fuera de la ventana cobrable.
+              Sin este aviso el inquilino solo veía meses pasados y no entendía por qué. */}
+          {info && contractMonths.length > 0 && contractMonths[contractMonths.length - 1] < currentMonth && (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+              Tu contrato vence el {new Date(info.endDate + "T00:00:00").toLocaleDateString("es-GT")} y
+              aún no está renovado, por eso no aparece el mes actual. Avisale a la administración para
+              que actualice la fecha de fin.
+            </div>
+          )}
 
           {/* Selector de mes a pagar */}
           {contractMonths.length > 0 && (

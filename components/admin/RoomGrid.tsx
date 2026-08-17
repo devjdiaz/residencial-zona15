@@ -121,7 +121,7 @@ function RoomCard({
           <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600 space-y-0.5">
             <div className="font-medium text-gray-800">{tenant.name}</div>
             <div className="text-gray-500">
-              {new Date(contract.start_date).toLocaleDateString("es-GT")} · {contract.duration_months} m
+              {new Date(contract.start_date).toLocaleDateString("es-GT")} – {new Date(contract.end_date).toLocaleDateString("es-GT")}
             </div>
             <div className={`font-medium ${paymentDue ? "text-amber-600" : "text-gray-500"}`}>
               Pago día {contract.payment_day}
