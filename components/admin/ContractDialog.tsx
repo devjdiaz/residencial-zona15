@@ -9,6 +9,16 @@ interface Props {
   onCreated: (credentials: { email: string; password: string; name: string; phone: string; contractId: string }) => void
 }
 
+// Suma meses a una fecha 'YYYY-MM-DD' sin salirse del mes (31 ene + 1 mes = 28/29 feb).
+function addMonths(isoDate: string, months: number) {
+  const [y, m, d] = isoDate.split("-").map(Number)
+  const target = new Date(y, m - 1 + months, 1)
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate()
+  target.setDate(Math.min(d, lastDay))
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}`
+}
+
 function generatePassword(length = 12) {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#"
   return Array.from(crypto.getRandomValues(new Uint8Array(length)))
@@ -25,6 +35,11 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
   const [dpi, setDpi] = useState("")
   const [startDate, setStartDate] = useState(today)
   const [durationMonths, setDurationMonths] = useState(6)
+  // Fecha de fin explícita. Se autocalcula (inicio + duración) mientras la admin no
+  // la edite a mano; en cuanto la toca, manda ella. Esto permite registrar inquilinos
+  // antiguos (inicio histórico) sin que el contrato quede vencido.
+  const [endDate, setEndDate] = useState(() => addMonths(today, 6))
+  const [endDateTouched, setEndDateTouched] = useState(false)
   const [monthlyRent, setMonthlyRent] = useState(room.price ?? 0)
   const [paymentDay, setPaymentDay] = useState(new Date().getDate())
   const [waTemplate, setWaTemplate] = useState("")
@@ -79,12 +94,13 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
       }
     }
 
-    const password = generatePassword()
+    if (endDate < startDate) {
+      setError("La fecha de fin no puede ser anterior a la fecha de inicio.")
+      setLoading(false)
+      return
+    }
 
-    const start = new Date(startDate)
-    const end = new Date(start)
-    end.setMonth(end.getMonth() + durationMonths)
-    const endDate = end.toISOString().split("T")[0]
+    const password = generatePassword()
 
     try {
       // Create tenant user server-side (avoids replacing admin session)
@@ -288,17 +304,45 @@ export default function ContractDialog({ room, onClose, onCreated }: Props) {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de inicio</label>
               <input
-                type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                type="date" required value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value)
+                  if (!endDateTouched && e.target.value) setEndDate(addMonths(e.target.value, durationMonths))
+                }}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
               />
+              <p className="text-xs text-gray-400 mt-1">
+                Desde cuándo vive aquí el inquilino. Puede ser anterior al sistema.
+              </p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Duración (meses)</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de fin</label>
               <input
-                type="number" min={1} max={24} required value={durationMonths}
-                onChange={(e) => setDurationMonths(Number(e.target.value))}
+                type="date" required value={endDate}
+                min={startDate}
+                onChange={(e) => { setEndDate(e.target.value); setEndDateTouched(true) }}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
               />
+              <p className="text-xs text-gray-400 mt-1">
+                Hasta cuándo vence el contrato en curso. Define hasta qué mes puede pagar el inquilino.
+              </p>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Duración del contrato en curso (meses)</label>
+              <input
+                type="number" min={1} max={120} required value={durationMonths}
+                onChange={(e) => {
+                  const n = Number(e.target.value)
+                  setDurationMonths(n)
+                  if (!endDateTouched && startDate && n > 0) setEndDate(addMonths(startDate, n))
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#b64532]/40"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Plazo del contrato vigente. Cuenta hacia atrás desde la fecha de fin para saber
+                qué meses puede pagar el inquilino en su portal.
+                {!endDateTouched && " Mientras no edites la fecha de fin, se recalcula sola."}
+              </p>
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">

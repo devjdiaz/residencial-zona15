@@ -71,6 +71,9 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
   const [email, setEmail] = useState(tenant?.email ?? "")
   const [dpi, setDpi] = useState(tenant?.dpi ?? "")
   const [startDate, setStartDate] = useState(contract.start_date)
+  // Fecha de fin explícita: la manda la admin. `duration_months` pasó a ser dato
+  // independiente del contrato en curso y ya no la calcula.
+  const [endDate, setEndDate] = useState(contract.end_date)
   const [durationMonths, setDurationMonths] = useState(contract.duration_months)
   const [paymentDay, setPaymentDay] = useState(contract.payment_day)
   const [monthlyRent, setMonthlyRent] = useState(contract.monthly_rent ?? listPrice ?? 0)
@@ -257,10 +260,11 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
       }
     }
 
-    const start = new Date(startDate)
-    const end = new Date(start)
-    end.setMonth(end.getMonth() + durationMonths)
-    const endDate = end.toISOString().split("T")[0]
+    if (endDate < startDate) {
+      setError("La fecha de fin no puede ser anterior a la fecha de inicio.")
+      setSaving(false)
+      return
+    }
 
     try {
       // 0. Email: actualiza la credencial de login en auth.users (y sincroniza el perfil).
@@ -403,10 +407,20 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de inicio</label>
                 <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputCls} />
+                <p className="text-xs text-gray-400 mt-1">Desde cuándo vive aquí el inquilino. Puede ser anterior al sistema.</p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Duración (meses)</label>
-                <input type="number" min={1} max={24} required value={durationMonths} onChange={(e) => setDurationMonths(Number(e.target.value))} className={inputCls} />
+                <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de fin</label>
+                <input type="date" required value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} className={inputCls} />
+                <p className="text-xs text-gray-400 mt-1">Hasta cuándo vence el contrato en curso. Define hasta qué mes puede pagar el inquilino.</p>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Duración del contrato en curso (meses)</label>
+                <input type="number" min={1} max={120} required value={durationMonths} onChange={(e) => setDurationMonths(Number(e.target.value))} className={inputCls} />
+                <p className="text-xs text-gray-400 mt-1">
+                  Plazo del contrato vigente. Cuenta hacia atrás desde la fecha de fin para saber qué meses
+                  puede pagar el inquilino en su portal. No cambia la fecha de fin.
+                </p>
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Día de corte de pago (día del mes)</label>
@@ -637,7 +651,7 @@ export default function ContractInfoDialog({ contract, roomIdentifier, listPrice
                 <span className="font-medium text-gray-900">{endDateLabel}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Duración</span>
+                <span className="text-gray-500">Contrato en curso</span>
                 <span className="font-medium text-gray-900">{contract.duration_months} meses</span>
               </div>
               <div className="flex justify-between">
